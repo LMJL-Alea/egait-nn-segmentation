@@ -1,25 +1,427 @@
 @Preamble{ " \newcommand{\noop}[1]{} " }
 
-@Manual{R-reticulate,
-  title = {reticulate: Interface to Python},
-  author = {Kevin Ushey and JJ Allaire and Yuan Tang},
-  year = {2020},
-  note = {R package version 1.18},
-  url = {https://github.com/rstudio/reticulate},
+----------------------- Context ------------------------------------------------
+
+@article{beauchet2016poor,
+  title={Poor gait performance and prediction of dementia: results from a meta-analysis},
+  author={Beauchet, Olivier and Annweiler, Cédric and Callisaya, Michele L and De Cock, Anne-Marie and Helbostad, Jorunn L and Kressig, Reto W and Srikanth, Velandai and Steinmetz, Jean-Paul and Blumen, Helena M and Verghese, Joe and others},
+  journal={Journal of the American Medical Directors Association},
+  volume={17},
+  number={6},
+  pages={482--490},
+  year={2016},
+  publisher={Elsevier}
 }
 
-@article{computo,
-  title = {Computo: reproducible computational/algorithmic contributions in statistics and machine learning},
-  author = {{Computo Team}},
-  year = {2020},
+@article{hamilton1844,
+  author = {William Rowan Hamilton},
+  title = {LXXVIII. On quaternions; or on a new system of imaginaries in Algebra },
+  journal = {The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science},
+  volume = {25},
+  number = {169},
+  pages = {489--495},
+  year = {1844},
+  publisher = {Taylor \& Francis},
+  doi = {10.1080/14786444408645047},
+  URL = {https://doi.org/10.1080/14786444408645047},
 }
 
-@Manual{R-base,
-  title = {R: A Language and Environment for Statistical Computing},
-  author = {{R Core Team}},
-  organization = {R Foundation for Statistical Computing},
-  address = {Vienna, Austria},
-  year = {2020},
-  url = {https://www.R-project.org/},
+@book{voight2021quaternion,
+  title={Quaternion algebras},
+  author={Voight, John},
+  year={2021},
+  publisher={Springer Nature}
 }
 
+@article{drouin2023semi,
+  title={Semi-supervised clustering of quaternion time series: Application to gait analysis in multiple sclerosis using motion sensor data},
+  author={Drouin, Pierre and Stamm, Aymeric and Chevreuil, Laurent and Graillot, Vincent and Barbin, Laetitia and Gourraud, Pierre-Antoine and Laplaud, David-Axel and Bellanger, Lise},
+  journal={Statistics in Medicine},
+  volume={42},
+  number={4},
+  pages={433--456},
+  year={2023},
+  publisher={Wiley Online Library}
+}
+
+----------------------- State of the art ---------------------------------------
+
+%Peak Detection; Zero-crossing
+
+@article{zijlstra2003assessment,
+  title={Assessment of spatio-temporal gait parameters from trunk accelerations during human walking},
+  author={Zijlstra, Wiebren and Hof, At L},
+  journal={Gait \& posture},
+  volume={18},
+  number={2},
+  pages={1--10},
+  year={2003},
+  publisher={Elsevier}
+}
+
+@article{gonzalez2010real,
+  title={Real-time gait event detection for normal subjects from lower trunk accelerations},
+  author={Gonz{\'a}lez, Rafael C and L{\'o}pez, Antonio M and Rodriguez-Ur{\'\i}a, Javier and Alvarez, Diego and Alvarez, Juan C},
+  journal={Gait \& posture},
+  volume={31},
+  number={3},
+  pages={322--325},
+  year={2010},
+  publisher={Elsevier}
+}
+
+@inproceedings{jiang2017robust,
+  title={A robust algorithm for gait cycle segmentation},
+  author={Jiang, Shuo and Wang, Xingchen and Kyrarini, Maria and Gr{\"a}ser, Axel},
+  booktitle={2017 25th european signal processing conference (eusipco)},
+  pages={31--35},
+  year={2017},
+  organization={IEEE}
+}
+
+@inproceedings{lueken2019peak,
+  title={Peak detection algorithm for gait segmentation in long-term monitoring for stride time estimation using inertial measurement sensors},
+  author={Lueken, Markus and ten Kate, Warner and Batista, Jo{\~a}o P and Ngo, Chuong and Bollheimer, Cornelius and Leonhardt, Steffen},
+  booktitle={2019 IEEE EMBS International Conference on Biomedical \& Health Informatics (BHI)},
+  pages={1--4},
+  year={2019},
+  organization={IEEE}
+}
+
+@article{mariani2013quantitative,
+  title={Quantitative estimation of foot-flat and stance phase of gait using foot-worn inertial sensors},
+  author={Mariani, Benoit and Rouhani, Hossein and Crevoisier, Xavier and Aminian, Kamiar},
+  journal={Gait \& posture},
+  volume={37},
+  number={2},
+  pages={229--234},
+  year={2013},
+  publisher={Elsevier}
+}
+
+@article{panebianco2018analysis,
+  title={Analysis of the performance of 17 algorithms from a systematic review: Influence of sensor position, analysed variable and computational approach in gait timing estimation from IMU measurements},
+  author={Panebianco, Giulia Pacini and Bisi, Maria Cristina and Stagni, Rita and Fantozzi, Silvia},
+  journal={Gait \& posture},
+  volume={66},
+  pages={76--82},
+  year={2018},
+  publisher={Elsevier}
+}
+
+@article{nazarahari2022foot,
+  title={Foot angular kinematics measured with inertial measurement units: A reliable criterion for real-time gait event detection},
+  author={Nazarahari, Milad and Khandan, Aminreza and Khan, Atif and Rouhani, Hossein},
+  journal={Journal of Biomechanics},
+  volume={130},
+  pages={110880},
+  year={2022},
+  publisher={Elsevier}
+}
+
+%Wavelet Transform
+
+@article{aminian2002spatio,
+  title={Spatio-temporal parameters of gait measured by an ambulatory system using miniature gyroscopes},
+  author={Aminian, Kamiar and Najafi, Bijan and B{\"u}la, C and Leyvraz, P-F and Robert, Ph},
+  journal={Journal of biomechanics},
+  volume={35},
+  number={5},
+  pages={689--699},
+  year={2002},
+  publisher={Elsevier}
+}
+
+@article{mccamley2012enhanced,
+  title={An enhanced estimate of initial contact and final contact instants of time using lower trunk inertial sensor data},
+  author={McCamley, John and Donati, Marco and Grimpampi, Eleni and Mazz{\`a}, Claudia},
+  journal={Gait \& posture},
+  volume={36},
+  number={2},
+  pages={316--318},
+  year={2012},
+  publisher={Elsevier}
+}
+
+@article{prateek2019gait,
+  title={Gait cycle validation and segmentation using inertial sensors},
+  author={Prateek, GV and Mazzoni, Pietro and Earhart, Gammon M and Nehorai, Arye},
+  journal={IEEE Transactions on Biomedical Engineering},
+  volume={67},
+  number={8},
+  pages={2132--2144},
+  year={2019},
+  publisher={IEEE}
+}
+
+%Dynamic Time Warping
+
+@article{ghersi2020gait,
+  title={Gait-cycle segmentation method based on lower-trunk acceleration signals and dynamic time warping},
+  author={Ghersi, Ignacio and Ferrando, Maria H and Fliger, Carlos G and Arenas, Cristhian F Castro and Molina, Diego J Edwards and Miralles, M{\'o}nica T},
+  journal={Medical Engineering \& Physics},
+  volume={82},
+  pages={70--77},
+  year={2020},
+  publisher={Elsevier}
+}
+
+@article{barth2015stride,
+  title={Stride segmentation during free walk movements using multi-dimensional subsequence dynamic time warping on inertial sensor data},
+  author={Barth, Jens and Oberndorfer, C{\"a}cilia and Pasluosta, Cristian and Sch{\"u}lein, Samuel and Gassner, Heiko and Reinfelder, Samuel and Kugler, Patrick and Schuldhaus, Dominik and Winkler, J{\"u}rgen and Klucken, Jochen and others},
+  journal={Sensors},
+  volume={15},
+  number={3},
+  pages={6419--6440},
+  year={2015},
+  publisher={MDPI}
+}
+
+
+%Hidden Markov Model
+
+@article{panahandeh2013continuous,
+  title={Continuous hidden Markov model for pedestrian activity classification and gait analysis},
+  author={Panahandeh, Ghazaleh and Mohammadiha, Nasser and Leijon, Arne and H{\"a}ndel, Peter},
+  journal={IEEE Transactions on Instrumentation and Measurement},
+  volume={62},
+  number={5},
+  pages={1073--1083},
+  year={2013},
+  publisher={IEEE}
+}
+
+@inproceedings{mannini2011hidden,
+  title={A hidden Markov model-based technique for gait segmentation using a foot-mounted gyroscope},
+  author={Mannini, Andrea and Sabatini, Angelo Maria},
+  booktitle={2011 Annual International Conference of the IEEE Engineering in Medicine and Biology Society},
+  pages={4369--4373},
+  year={2011},
+  organization={IEEE}
+}
+
+
+@article{garcia2022adaptive,
+  title={Adaptive algorithm for gait segmentation using a single IMU in the thigh pocket},
+  author={Garcia, Francisco A and P{\'e}rez-Ibarra, Juan C and Terra, Marco H and Siqueira, Adriano AG},
+  journal={IEEE Sensors Journal},
+  volume={22},
+  number={13},
+  pages={13251--13261},
+  year={2022},
+  publisher={IEEE}
+}
+
+@article{haji2018segmentation,
+  title={Segmentation of gait sequences in sensor-based movement analysis: a comparison of methods in Parkinson’s disease},
+  author={Haji Ghassemi, Nooshin and Hannink, Julius and Martindale, Christine F and Ga{\ss}ner, Heiko and M{\"u}ller, Meinard and Klucken, Jochen and Eskofier, Bj{\"o}rn M},
+  journal={Sensors},
+  volume={18},
+  number={1},
+  pages={145},
+  year={2018},
+  publisher={MDPI}
+}
+
+%Machine Learning
+
+@article{saboor2020latest,
+  title={Latest research trends in gait analysis using wearable sensors and machine learning: A systematic review},
+  author={Saboor, Abdul and Kask, Triin and Kuusik, Alar and Alam, Muhammad Mahtab and Le Moullec, Yannick and Niazi, Imran Khan and Zoha, Ahmed and Ahmad, Rizwan},
+  journal={Ieee Access},
+  volume={8},
+  pages={167830--167864},
+  year={2020},
+  publisher={IEEE}
+}
+
+@article{tahir2012parkinson,
+  title={Parkinson disease gait classification based on machine learning approach},
+  author={Tahir, Nooritawati Md and Manap, Hany Hazfiza},
+  journal={Journal of Applied Sciences(Faisalabad)},
+  volume={12},
+  number={2},
+  pages={180--185},
+  year={2012}
+}
+
+@article{wahid2015classification,
+  title={Classification of Parkinson's disease gait using spatial-temporal gait features},
+  author={Wahid, Ferdous and Begg, Rezaul K and Hass, Chris J and Halgamuge, Saman and Ackland, David C},
+  journal={IEEE journal of biomedical and health informatics},
+  volume={19},
+  number={6},
+  pages={1794--1802},
+  year={2015},
+  publisher={IEEE}
+}
+
+@article{rampp2014inertial,
+  title={Inertial sensor-based stride parameter calculation from gait sequences in geriatric patients},
+  author={Rampp, Alexander and Barth, Jens and Sch{\"u}lein, Samuel and Ga{\ss}mann, Karl-G{\"u}nter and Klucken, Jochen and Eskofier, Bj{\"o}rn M},
+  journal={IEEE transactions on biomedical engineering},
+  volume={62},
+  number={4},
+  pages={1089--1097},
+  year={2014},
+  publisher={IEEE}
+}
+
+@article{hannink2016sensor,
+  title={Sensor-based gait parameter extraction with deep convolutional neural networks},
+  author={Hannink, Julius and Kautz, Thomas and Pasluosta, Cristian F and Ga{\ss}mann, Karl-G{\"u}nter and Klucken, Jochen and Eskofier, Bjoern M},
+  journal={IEEE journal of biomedical and health informatics},
+  volume={21},
+  number={1},
+  pages={85--93},
+  year={2016},
+  publisher={IEEE}
+}
+
+@article{farah2019design,
+  title={Design, development, and evaluation of a local sensor-based gait phase recognition system using a logistic model decision tree for orthosis-control},
+  author={Farah, Johnny D and Baddour, Natalie and Lemaire, Edward D},
+  journal={Journal of neuroengineering and rehabilitation},
+  volume={16},
+  pages={1--11},
+  year={2019},
+  publisher={Springer}
+}
+
+@article{prado2019gait,
+  title={Gait segmentation of data collected by instrumented shoes using a recurrent neural network classifier},
+  author={Prado, Antonio and Cao, Xiya and Robert, Maxime T and Gordon, Andrew M and Agrawal, Sunil K},
+  journal={Physical Medicine and Rehabilitation Clinics},
+  volume={30},
+  number={2},
+  pages={355--366},
+  year={2019},
+  publisher={Elsevier}
+}
+
+@inproceedings{potluri2019machine,
+  title={Machine learning based human gait segmentation with wearable sensor platform},
+  author={Potluri, Sasanka and Chandran, Arvind Beerjapalli and Diedrich, Christian and Schega, Lutz},
+  booktitle={2019 41st Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC)},
+  pages={588--594},
+  year={2019},
+  organization={IEEE}
+}
+
+@inproceedings{gadaleta2019deep,
+  title={Deep learning techniques for improving digital gait segmentation},
+  author={Gadaleta, Matteo and Cisotto, Giulia and Rossi, Michele and Rehman, Rana Zia Ur and Rochester, Lynn and Del Din, Silvia},
+  booktitle={2019 41st Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC)},
+  pages={1834--1837},
+  year={2019},
+  organization={IEEE}
+}
+
+----------------------- Proposed model ------------------------------------------------
+
+@article{Menz2004,
+  title = {Reliability of the GAITRite® walkway system for the quantification of temporo-spatial parameters of gait in young and older people},
+  journal = {Gait \& Posture},
+  volume = {20},
+  number = {1},
+  pages = {20-25},
+  year = {2004},
+  issn = {0966-6362},
+  doi = {https://doi.org/10.1016/S0966-6362(03)00068-7},
+  url = {https://www.sciencedirect.com/science/article/pii/S0966636203000687},
+  author = {Hylton B Menz and Mark D Latt and Anne Tiedemann and Marcella {Mun San Kwan} and Stephen R Lord},
+}
+
+@book{ramsay2005,
+  title={Functional Data Analysis},
+  author={J. O. Ramsay, B. W. Silverman},
+  year={2005},
+  publisher={Springer New York, NY},
+  doi={https://doi.org/10.1007/b98888}
+}
+
+@electronic{narayan2017,
+  author = {Ashwin Narayan},
+  title = {How to Integrate Quaternions},
+  year = {2017},
+  url = {https://www.ashwinnarayan.com/post/how-to-integrate-quaternions/}
+}
+
+@book{kuhn2013applied,
+  title={Applied Predictive Modeling},
+  author={Kuhn, M},
+  year={2013},
+  publisher={Springer New York}
+}
+
+@book{breiman2017classification,
+  title={Classification and regression trees},
+  author={Breiman, Leo},
+  year={2017},
+  publisher={Routledge}
+}
+
+@electronic{varma2018,
+  title={Deep Learning},
+  author={Subir Varma and Sanjiv Das},
+  year={2018},
+  url={https://srdas.github.io/DLBook/index.html}
+}
+
+
+-----------------Tuning and comparing segmentation models------------------------------
+
+@article{chawla2002,
+   title={SMOTE: Synthetic Minority Over-sampling Technique},
+   volume={16},
+   ISSN={1076-9757},
+   url={http://dx.doi.org/10.1613/jair.953},
+   DOI={10.1613/jair.953},
+   journal={Journal of Artificial Intelligence Research},
+   publisher={AI Access Foundation},
+   author={Chawla, N. V. and Bowyer, K. W. and Hall, L. O. and Kegelmeyer, W. P.},
+   year={2002},
+   month=jun, 
+   pages={321–357} 
+}
+
+@article{haibo2008,
+  author={Haibo He and Yang Bai and Garcia, Edwardo A. and Shutao Li},
+  booktitle={2008 IEEE International Joint Conference on Neural Networks (IEEE World Congress on Computational Intelligence)}, 
+  title={ADASYN: Adaptive synthetic sampling approach for imbalanced learning}, 
+  year={2008},
+  pages={1322-1328},
+  doi={10.1109/IJCNN.2008.4633969}
+}
+
+@article{hashemi2018,
+  author = {Hashemi, Mahdi and Karimi, Hassan},
+  year = {2018},
+  month = {11},
+  pages = {},
+  title = {Weighted Machine Learning},
+  volume = {6},
+  journal = {Statistics, Optimization \& Information Computing},
+  doi = {10.19139/soic.v6i4.479}
+}
+
+@article{mortaz2020,
+  title={Imbalance accuracy metric for model selection in multi-class imbalance classification problems},
+  author={Mortaz, Ebrahim},
+  journal={Knowledge-Based Systems},
+  volume={210},
+  pages={106490},
+  year={2020},
+  publisher={Elsevier}
+}
+
+@article{li2013weighted,
+  title={Weighted Youden index and its two-independent-sample comparison based on weighted sensitivity and specificity},
+  author={Li, Dan-ling and Shen, Frank and Yin, Yue and Peng, Jun-xiang and Chen, Ping-yan},
+  journal={Chinese medical journal},
+  volume={126},
+  number={6},
+  pages={1150--1154},
+  year={2013},
+  publisher={LWW}
+}

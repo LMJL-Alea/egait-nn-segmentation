@@ -1,32 +1,25 @@
 project:
-  title: "template-computo-R"
+  title: "egait-nn-segmentation"
 
-title: "Template for contribution to Computo"
-subtitle: "Example dedicated to `R` users"
+title: "Gait Segmentation Model for Rotation Time Series Collected by a Wearable Sensor using Machine Learning"
 author:
-  - name: Jane Doe
+  - name: Manon Simonot
     corresponding: true
-    email: janedoe@nowhere.moon
-    url: https://janedoe.someplace.themoon.org
-    orcid: 0000-0000-0000-0000
+    email: manon.simonot@univ-nantes.fr
     affiliations:
-      - name: Name of Affiliation one
-        department: Statistics
-        url: https://someplace.themoon.org
-  - name: John Doe
-    email: johndoe@nowhere.moon
-    url: https://johndoe.someplace.themoon.org
-    orcid: 0000-0000-0000-0000
+      - name: Department of Mathematics Jean Leray, UMR CNRS 6629, Nantes University
+  - name: Lise Bellanger
+    email: lise.bellanger@univ-ubs.fr
     affiliations:
-      - name: Name of Afficiliation two
-        department: Computer Science
-        url: https://someplace.themoon.org
+      - name: Lab-STICC Laboratory, UMR CNRS 6285, South Brittany University
+  - name: Aymeric Stamm
+    email: aymeric.stamm@cnrs.fr
+    affiliations:
+      - name: Department of Mathematics Jean Leray, UMR CNRS 6629, Nantes University
 date: last-modified
 date-modified: last-modified
-description: |
-  This document provides a template based on the [`quarto`](https://quarto.org/) system for contributions to Computo, using the [`quarto journal extension`](https://github.com/computorg/computo-quarto-extension), the knitr kernel (R user) and [`renv`](https://rstudio.github.io/renv/articles/renv.html) to set-up the dependencies.
 abstract: >+
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur posuere vestibulum facilisis. Aenean pretium orci augue, quis lobortis libero accumsan eu. Nam mollis lorem sit amet pellentesque ullamcorper. Curabitur lobortis libero eget malesuada vestibulum. Nam nec nibh massa. Pellentesque porttitor cursus tellus. Mauris urna erat, rhoncus sed faucibus sit amet, venenatis eu ipsum.
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur posuere vestibulum facilisis. Aenean pretium orci augue, quis lobortis libero accumsan eu. Nam mollis lorem sit amet pelSlowsque ullamcorper. Curabitur lobortis libero eget malesuada vestibulum. Nam nec nibh massa. PelSlowsque porttitor cursus tellus. Mauris urna erat, rhoncus sed faucibus sit amet, venenatis eu ipsum.
 keywords: [key1, key2, key3]
 citation:
   type: article-journal
@@ -42,4 +35,11 @@ draft: true # set to false once the build is running
 published: false # will be set to true once accepted
 format:
   computo-html: default
-  computo-pdf: default
+  computo-pdf:
+    cite-method: biblatex
+    biblatexoptions: "sorting=none"
+tbl-cap-location: bottom
+header-includes:
+  - \usepackage{longtable}
+  - \usepackage{hhline}
+  - \usepackage{enumitem}
