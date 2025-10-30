@@ -38,8 +38,8 @@ format:
   computo-pdf:
     cite-method: biblatex
     biblatexoptions: "sorting=none"
+    header-includes:
+      - \usepackage{longtable}
+      - \usepackage{hhline}
+      - \usepackage{enumitem}
 tbl-cap-location: bottom
-header-includes:
-  - \usepackage{longtable}
-  - \usepackage{hhline}
-  - \usepackage{enumitem}
