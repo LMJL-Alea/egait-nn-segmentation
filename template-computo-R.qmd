@@ -133,7 +133,7 @@ Six subjects have been included in this study, each of them walking at different
 <!-- : Summary of subjects and walking speeds used for the model. {#tbl-subjects} -->
 
 
-::: {#tbl-subjects}
+::: {#tbl-subjects tbl-pos="H"}
 
 ```{r}
 data.frame(
@@ -250,7 +250,35 @@ Finally, the variable to be predicted contains the five possible classes from th
 
 ## Classification strategies
 
-predicting either events or phases
+To segment the gait, we compare two strategies.
+
+Method 1: Predicting gait events
+
+: The first method is to directly predict the gait events happening during the walk. We classify the observations in five classes for each event and other times :
+
+: - Right Heel Strike
+- Left Toe Off
+- Left Heel Strike
+- Right Toe Off
+- None (all other times not corresponding to a certain event)
+
+: This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the negative class widely over-represented. Indeed, the class we call *None* that represents times that do not belong to an event is clearly larger than the four other ones.
+
+![Example of events represented on a unit quaternion time serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event_timeserie width=350}
+
+Method 2: Predicting phases
+
+: The second method consists of predicting phases in the signal that are characterized with the gait events. We label each part in the signal between two events as a phase, leading to four classes for our observations:
+
+: - Pre-Stance phase: between Right Heel Strike and Left Toe Off
+- Stance phase: between Left Toe Off and Left Heel Strike
+- Pre-Swing phase: between Left Heel Strike and Right Toe Off
+- Swing phase: between Right Toe Off and Right Heel Strike
+
+: To name these classes, we base ourselves on a typical cycle starting with the right foot, starting with a stance phase while the right foot is on the ground followed by a swing phase. This classification allows us to have four classes that are less imbalanced without a negative class. The disadvantage is that after the model predictions we need to find the events from the predicted phases.
+
+![Example of phases represented on a unit quaternion time serie.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases_timeserie width=350}
+
 
 ## Supervised classification models
 
@@ -362,11 +390,11 @@ with:
 This formula gives balanced weights at the different classes to pay better attention at the minority class.
 
 
-## Performance metrics 
+## Performance metrics
 
-TODO: add accuracy for phase prediction
+In classification problems, the most widely used metric is accuracy which is defined as the number of correct predictions divided by the total number of predictions. In our second strategy where we predict phases, we have four classes that are not severely unbalanced and without a negative class, thus we can simply use accuracy to tune and evaluate our models.
 
-In classification problems, the most widely used metric is accucary which is defined as the number of correct predictions divided by the total number of predictions. In the case of imbalanced classes, we cannot use accucary to correctly evaluate the model. Indeed, since the model will predict almost only the majority class, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
+In the case of severe imbalanced classes like in our first strategy where we directly predict events, we cannot use accuracy to correctly evaluate the model. Indeed, since the model will predict almost only the majority class which is the negative one, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
 
 We need to use other metrics that are adapted for this situation. An important tool is the confusion matrix which indicate the number of predictions in each class compared to the real values of the observations.
 
@@ -411,17 +439,16 @@ In our case, we chose to put a weight of $0.7$ on the MA Sensitivity to take mor
 
 ## Data splitting and Tuning strategy
 
-TODO: add folds for tuning
+To correctly tune and evaluate the model, data is firstly split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to then evaluate the model on data never seen before.
 
-To correctly tune and evaluate the model, data is split in three sets (see @fig-datasplitting).
+In certain models such as neural networks, the training set is divided furthermore into a train and a validation set, containing 80% and 20% of the training set respectively. In this case, the model computes the predictions on the train set and the loss over the validation set to determine the model parameters.
+
+For tuning, the training set is used to create five folds which are random partition of the training set to get five equal sized subsamples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
 
 ![Data splitting.](images/data-splitting.png){#fig-datasplitting width=300}
 
-During tuning and training, the training set is used to train the model and the validation set is used to find the best parameters. The test set is never used during the training step to then evaluate the model on data never seen before. 
-
-More precisely, for a neural network, we first use the training set to train the parameters (the weights and the biases of the network). Then, we use the validation set to determine the hyper-parameters (for instance, the number of layers and nodes). Finally, we use the test set to evaluate the model on unseen data.
-
 To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values.
+
 
 ## Results
 
