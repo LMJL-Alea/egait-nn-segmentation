@@ -6,9 +6,9 @@
 
 Study of the human gait has been shown to be important in various health applications, such as study of general health in elderly populations [@beauchet2016poor]. Wearable sensors are increasingly used for gait analysis as they are smaller, cheaper and more convenient than other methods such as motion capture systems or mats containing pressure sensors.
 
-A walking cycle is defined as a stride, which is composed of two steps. More formally, a stride is the set of movements performed between two consecutive contacts of the heel of the same foot with the ground. The goal of our method is to detect different events happening during gait cycles when a subject is walking. This work can be used to segment the gait as cycles to extract strides and it allows further study of the gait such as spatio-temporal parameters computation.
+A walking cycle is defined as a stride, which is composed of two steps. More formally, a stride is the set of movements performed between two consecutive contacts of the heel of the same foot with the ground. The goal of our method is to detect different events happening during gait cycles when a subject is walking. This work can be used to segment the gait as cycles to extract strides and it allows further study of the gait such as spatio-temporal parameters analysis.
 
-More precisely, the detected events are the moments where a foot touches or leaves the ground. They are called Heel-Strike and Toe-off respectively and they can be used to segment the stride in phases. The stance phase corresponds to the moments when the foot touches the ground and can be found between the Heel-Strike and Toe-off events (see @fig-walking-cycle). This phase lasts generally 60% of the entire stride and is followed by the swing phase when the foot is not anymore in contact with the ground.
+More precisely, the detected events are the moments where a foot touches or leaves the ground. They are called Heel-Strike and Toe-off respectively and they can be used to segment the stride in phases. The stance phase corresponds to the moments when the foot is in contact with the ground and can be found between the Right Heel-Strike and Left Toe-off events when a cycle starts with the right foot (see @fig-walking-cycle). This phase lasts generally 60% of the entire stride and is followed by the swing phase when the right foot is not anymore in contact with the ground.
 
 With these four markers identified during each cycle, the gait can be analysed with parameters such as stride length and stance phase percentage variability or symmetry between feet.
 
@@ -80,11 +80,6 @@ Other Machine Learning methods
 In our research, we did not find studies using a decision tree model to segment the sensor signal into strides.
 
 
-## Methologic contributions
-
-   
-
-
 # Proposed segmentation model
 
 ## Data acquisition
@@ -94,9 +89,9 @@ A wearable sensor was used to record the hip rotation. It contains an accelerome
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
 
-Furthemore, during acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004]. It implies that subject were walking approximately 9 meters on a straight line. This device gives various informations thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times can be used to know when the gait events actually happened. This data is then used to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
+Furthermore, during acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004]. It implies that subjects were walking approximately nine meters on a straight line. This device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times can be used to know when the gait events actually happened. This data is then used to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
 
-Six subjects have been included in this study, each of them walking at different speed (see @tbl-subjects). 
+Six subjects have been included in this study, each of them walking at different speeds (see @tbl-subjects). 
 
 <!-- +-----+--------+-------+-------------------------+ -->
 <!-- | ID  | Gender | Age   | Speed (cm/s)            | -->
@@ -168,7 +163,7 @@ data.frame(
   )
 ```
 
-Summary of subjects and walking speeds used for the model.
+Summary of subjects and walking speeds used to train the model.
 
 :::
 
@@ -177,7 +172,7 @@ Summary of subjects and walking speeds used for the model.
 
 Sensor data
 
-: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie). It is important to note that on this figure, the walking cycles are clearly apparent and consistent over time, as it represents a healthy gait. This is not the case for subjects having gait disorders, which is one of the reason we develop a method more complex than peak detection. Furthermore, our method allows prediction of different events during a walking cycle which would not be allowed by only segmenting the signal into cycles.
+: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie). It is important to note that on this figure, the walking cycles are clearly apparent and consistent over time, as it represents a healthy gait. This is not the case for subjects having gait disorders, which is one of the reason we develop a method more complex than peak detection. Our method also allows prediction of different events during a walking cycle which would not be allowed by only segmenting the signal into cycles.
 
 ![Data returned by the wearable sensor.](images/time-serie.png){#fig-timeserie width=350}
 
@@ -200,7 +195,7 @@ $$ {#eq-centring-qts}
 
 Pressure mat data
 
-: The GAITRite© mat returns directly spatio-temporal parameters such as stride duration, stride length or speed. Since the two devices were triggered simultaneously, the same time range is used to associate the gait events with a time on the sensor time-series. More precisely, each time of the time-series will be classified between a number of classes. This method rises a class imbalance challenge that will be addressed later in the article.
+: The GAITRite© mat returns directly spatio-temporal parameters such as stride duration, stride length or speed. Since the two devices were triggered simultaneously, the same time range is used to associate each gait event with a time on the sensor time-series. More precisely, each time of the time-series will be classified between a number of classes. This method rises a class imbalance challenge that will be addressed later in the article.
 
 
 ## Feature space
@@ -223,7 +218,7 @@ $$ {#eq-angular-acc}
 
 Euler angles
 
-: The angles named Roll, Pitch and Yaw represent rotations around the three principal axies. Their computation is done using the quaternion time-series, with the following rotation matrix to go from the quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ to the angles.
+: The angles named Roll, Pitch and Yaw represent rotations around the three principal axis. Their computation is done using the quaternion time-series, with the following rotation matrix to go from the quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ to the angles.
 
 $$
 \begin{bmatrix}
@@ -242,15 +237,14 @@ $$ {#eq-rpy}
 
 Walking speed
 
-: One of our hypothesis is that the subject gait can differ depending if the subject walks slowly of faster. Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.
+: One of our hypothesis is that the gait can differ depending if the subject walks slowly of faster. Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.
 
-On the other hand, the feature space depends on two hyper-parameters. The first one is a smoothness parameter for the time-serie curves, as derivation is used to compute some variables. The second one is a lag parameter, to keep at the time $t_p$ the information from the time $t_{p-1}$. That parameter implies that the feature space contains $10 + 9 \times lag$ variables.
+The feature space depends on two hyper-parameters. The first one is a smoothness parameter *spar* for the time-serie curves, as derivation is used to compute some variables. It is contained in $]0,1]$ and is used to fit a cubic smoothing spline to the time-serie. The second one is the *lag* parameter, to keep at the time $t_p$ the information from the time $t_{p-1}, \dots, t_{p-lag}$. That parameter implies that the feature space contains $10 + 9 \times lag$ variables.
 
-Finally, the variable to be predicted contains the five possible classes from the GAITRite© mat output. We choose to label a number of points $k$ as corresponding to the event around the precise event time. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, by labeling as part of an event three points rather than just one, the event happens in a window of 30 ms. This strategy also reduces somewhat the imbalance between the class proportions.
 
 ## Classification strategies
 
-To segment the gait, we compare two strategies.
+To segment the gait, we compare two strategies to classify the observations.
 
 Method 1: Predicting gait events
 
@@ -265,6 +259,8 @@ Method 1: Predicting gait events
 : This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the negative class widely over-represented. Indeed, the class we call *None* that represents times that do not belong to an event is clearly larger than the four other ones.
 
 ![Example of events represented on a unit quaternion time serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event_timeserie width=350}
+
+When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, by labeling as part of an event three points rather than just one, the event happens in a window of 30 ms. This strategy also reduces somewhat the imbalance between the class proportions.
 
 Method 2: Predicting phases
 
@@ -284,7 +280,7 @@ Method 2: Predicting phases
 
 Multinomial Regression [@hosmer2013applied; @hastie2015statistical]
 
-: A multinomial regression is built by fitting a set of independent binary logistic regression. Let $N$ be the number of observations and $X = (X_1, \dots, X_p)$ the predictors. We want to classify our observations in $K$ classes. We choose one category to be the baseline, we name it $k_0$. We build $K-1$ logit equations modeling the log-odds of a class $k$ versus the class $k_0$. The logit equation for a class $k$ is:
+: A multinomial regression is built by fitting a set of independent binary logistic regressions. Let $N$ be the number of observations and $X = (X_1, \dots, X_p)$ the predictors. We want to classify our observations in $K$ classes. We choose one category to be the baseline, we name it $k_0$. We build $K-1$ logit equations modeling the log-odds of a class $k$ versus the class $k_0$. The logit equation for a class $k$ is:
 
 : $$
 log\left( \frac{\mathbb{P}(Y = k | X)}{\mathbb{P}(Y = k_0 | X)} \right) = \beta_{0k} + \beta_k^TX
@@ -311,27 +307,27 @@ $${#eq-loglikelihood}
 : When we have a large set of variables, we can regularized the estimation by introducing penalty terms in the log-likelihood function. The two main types of penalization are the L1 regularization (also called a Lasso model) and the L2 regularization (also called a Ridge model). The Ridge regression prevents overfitting by adding the term $\lambda \sum_{k=1}^K \beta_k^2$ to the loss function, while the Lasso model selects features by adding the term $\lambda \sum_{k=1}^K |\beta_k|$ to the loss, giving a sparse solution with only some non-zero coordinates. The parameter $\lambda$ is called the regularization parameter.
 
 
-Decision tree
+Decision tree [@kuhn2013applied; [@breiman2017classification]]
 
-: Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. Here is a figure of a tree with two splitting, leading to three leaf nodes. 
+: Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes. 
 
 : ![Basic decision tree.](images/decision-tree.png){#fig-decisiontree width=250}
 
-: The goal is to classify the observations into smaller and more homogeneous groups, forming rectangular areas within data points. Homogeneity is defined here as how pure are the splitting nodes [@kuhn2013applied], meaning that there is a higher proportion of one class in each node. We can use the Gini index [@breiman2017classification] to compute purity. For a binary classification, if $p1$ and $p2$ are the probabilities for class 1 and 2 respectively, the Gini index for a node computed with the formula:
+: The goal is to classify the observations into smaller and more homogeneous groups, forming rectangular areas within data points. Homogeneity is defined here as how pure the splitting nodes are , meaning that there is a higher proportion of one class in each node. We can use the Gini index to compute purity. In a scenario with $K$ classes, each having probability $p_1, \dots, p_K$, the Gini impurity for a certain node is defined as:
 
 : $$
-\text{Gini} = p_1(1-p_1) + p_2(1-p_2) = 2p_1p_2
+G(p) = \sum_{k=1}^K p_k \sum_{j \ne k}^K p_j = \sum_{k=1}^K p_k (1-p_k) = 1 - \sum_{k=1}^K (p_k)^2
 $${#eq-gini}
 
-: This index is minimal when one of the probabilities tends toward zero, indicating that the node is pure. To build the tree, the model builds splitting nodes by evaluating each splitting point (ie values taken by variables to split observations into groups) to find the one minimizing the Gini index, until a stopping criteria is met.
+: This index is minimal when one of the probabilities tends toward zero, indicating that the node is pure. To build the tree, the model builds splitting nodes by evaluating each splitting point (ie values taken by variables to split observations into groups) to find the one minimizing the Gini index, until a stopping criteria is met such as a maximum tree depth.
 
 Bagged trees, Random forest and Boosted trees [@kuhn2013applied]
 
-: A bagged trees model is an ensemble of $M$ decision trees trained in parallel. Each decision tree is built with a bootstrap sample of the original data, which is a sample of same size than the original data by selecting random observations with replacement. Then, each of these trees is used to generate a prediction for a new observation. Finally, the observation is classified in the class that has collected the greatest number of votes from the trees.
+: A bagged trees model is an ensemble of $M$ decision trees trained in parallel. Each decision tree is built with a bootstrap sample of the original data, which is a sample of same size than the original data by selecting random observations with replacement. Then, each of these trees is used to generate a prediction for a new observation. Finally, the observation is classified in the class that has collected the greatest number of votes from all the trees.
 
 : A random forest is a similar model, also using a number of decision trees. The model also trains a number of trees in parallel on bootstrap samples of the original data. The difference is that, at each split, a random subset of variables is selected to find the best predictors within this subset. The observations are then classified as usual. The prediction is done as seen before, with each tree voting for a class and selecting the majority to classify the observation.
 
-: Finally, boosted trees train a number of decision trees sequentially to learn from the previous tree mistakes and put a higher weight on previously misclassified observations. The trees are also trained on bootstrapped samples, selecting a random subset of variables at each node. The final prediction is the weighted sum of the predictions from each tree, the weights are determined by the performance of the trees.
+: Finally, boosted trees train a number of decision trees sequentially to learn from the previous tree mistakes and put a higher weight on previously misclassified observations. The trees are also trained on bootstrapped samples, selecting a random subset of variables at each node. The final prediction is the weighted sum of the predictions from each tree with the weights determined by the performance of the trees.
 
 
 $k$-Nearest Neighbors [@cover1967nearest]
@@ -344,7 +340,7 @@ To calculate the distance between the input and its neighbors, the Minkowski dis
 
 $$
 d(x, y) = \left[ \sum_{i=1}^n (x_i-y_i)^p \right]^{1/p}
-$$
+$${#eq-minkowski}
 
 This distance is a generalization of multiple well-know distances as we find the Euclidean distance when $p = 2$ and the Manhattan distance when $p = 1$.
 
@@ -362,32 +358,32 @@ $$ {#eq-crossentropy}
 : - $t_k$ the ground truth.
 : - $y_k$ the classification probability.
 
-: These models are complex and rely on a efficient algorithm for the parameter update and an adapted activation function, as well as possible utilization of batch normalization and regularization to find a model with a good complexity for the data. Tuning is done to find the best hyper-parameters such as the number of layers and nodes and the learning rate.
+: These models are complex and rely on a efficient algorithm for the parameter update and an adapted activation function, as well as possible utilization of batch normalization, regularization or dropout to find a model with a good complexity for the data. Tuning is done to find the best hyper-parameters such as the number of layers and nodes or the learning rate.
 
 
 # Tuning and comparing segmentation models
 
 ## Dealing with imbalanced data
 
-By classifying specific times in a time serie, we work with imbalanced data, meaning that a small proportion of our data is in the target class, and most of the data points are in the other class. In this situation, the model learns adequate information about the majority class but doesn't have enough information on the minority class. This implies bad predictions on the target class because the model misses this class.
+By classifying specific times in a time-serie, we work with imbalanced data. Especially in the first strategy when we predict events, a small proportion of the data is in the target classes, and most of the data points are in the negative class. In this situation, the model learns adequate information about the majority class but doesn't have enough information on the minority classes. This implies bad predictions on the target classes because the model misses them.
 
 A lot of sampling algorithms exist to address this issue such as random oversampling or random undersampling which add or remove observations from certain classes to create a balanced dataset. More complex methods exist, we can cite the popular SMOTE [@chawla2002] and ADASYN [@haibo2008] algorithms that create synthetic data by considering the classes of the nearest neighbors of random observations. Although these algorithms are very popular, they did not show good results for our data. We are making the hypothesis that our data is too imbalanced for these methods.
 
-To tell the model to pay more attention to the patterns in the minority class, an effective way is to put a larger weight on this class. More precisely, the weight given to each observation specifies how much each observation influences the model's estimation In order for the model to be biased in favor of the observations considered more important, in our case those belonging to the minority class, the weights of the observations are integrated into the cost function. This makes it possible to regulate the cost of misclassification, in the sense that misclassifying more important observations will be more costly, encouraging the model to avoid this situation [@hashemi2018].
+To tell the model to pay more attention to the patterns in the minority classes, an effective way is to put a larger weight on these classes compared to the negative one. More precisely, the weight given to each observation specifies how much this observation influences the model's estimation In order for the model to be biased in favor of the observations considered more important, in our case those belonging to the minority classes, the weights of the observations are integrated into the cost function. This makes it possible to regulate the cost of misclassification, in the sense that misclassifying more important observations will be more costly, encouraging the model to avoid this situation [@hashemi2018].
 
-Weights put on classes are the inverse class frequency weights. The weight on the class $j$ is the following:
+When the classes are not too imbalanced, such as in our second strategy of phase prediction, we can use the inverse class frequency weights where the weight on the class $k$ is the following:
 
 $$
-\omega_j = \frac{n}{n_{classes} \hspace{1mm} n_j}
+\omega_k = \frac{n}{n_{classes} \hspace{1mm} n_k}
 $$ {#eq-inv-class-frequency}
 
 with:
 
 - $n$ the total number of observations.
 - $n_{classes}$ the number of classes.
-- $n_j$ the number of observations in the class $j$.
+- $n_k$ the number of observations in the class $k$.
 
-This formula gives balanced weights at the different classes to pay better attention at the minority class.
+This formula gives balanced weights but we can also choose class weights manually and tune them as one of our model parameter.
 
 
 ## Performance metrics
@@ -408,7 +404,7 @@ $$
 \text{Specificity} = \frac{TN}{TN+FP}
 $${#eq-specificity}
 
-The Sensitivity measures how well the model has found all occurences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
+The Sensitivity measures how well the model has found all occurences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
 
 In a multiclass classification, we can extend these metrics to use them with a different number of positive classes. In our case, we have four classes containing less observations and having to be correctly predicted, while the other class is the majority class. 
 
@@ -426,7 +422,7 @@ $${#eq-maspecificity}
 
 These metrics can be used to evaluate our model to know if the classes of interest are correctly predicted.
 
-To tune a model, we need a metric that combines the informations from the previously defined MA Sensitivity and MA Specificity. The weighted Youden index [@li2013weighted] has this function, allowing the user to put a different weight on each metric. We generalize this index with the Macro-Average versions of the metrics:
+To tune a model, we need a metric that combines the information from the previously defined MA Sensitivity and MA Specificity. The weighted Youden index [@li2013weighted] has this function, allowing the user to put a different weight on each metric. We generalize this index with the Macro-Average versions of the metrics:
 
 $$
 J_w = 2(w \times \text{MA Sensitivity} + (1-w) \times \text{MA Specificity}) -1
@@ -434,7 +430,7 @@ $${#eq-youden}
 
 with $w \in [0,1]$ representing the weight put on the MA Sensitivity.
 
-In our case, we chose to put a weight of $0.7$ on the MA Sensitivity to take more into account this metric, to make sure not to forget observatins in the minority classes.
+In our case, we chose to put a weight of $0.7$ on the MA Sensitivity to make sure not to forget observations in the minority classes.
 
 
 ## Data splitting and Tuning strategy
@@ -443,11 +439,11 @@ To correctly tune and evaluate the model, data is firstly split in two sets: the
 
 In certain models such as neural networks, the training set is divided furthermore into a train and a validation set, containing 80% and 20% of the training set respectively. In this case, the model computes the predictions on the train set and the loss over the validation set to determine the model parameters.
 
-For tuning, the training set is used to create five folds which are random partition of the training set to get five equal sized subsamples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
+For tuning, the training set is used to create five folds which are random partitions of the training set to get five equal sized subsamples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
 
 ![Data splitting.](images/data-splitting.png){#fig-datasplitting width=300}
 
-To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values.
+To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentionned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction
 
 
 ## Results
