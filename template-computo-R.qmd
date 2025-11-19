@@ -311,7 +311,7 @@ Decision tree [@kuhn2013applied; [@breiman2017classification]]
 
 : Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes. 
 
-: ![Basic decision tree.](images/decision-tree.png){#fig-decisiontree width=250}
+: ![Basic decision tree.](images/example_tree.png){#fig-decisiontree width=250}
 
 : The goal is to classify the observations into smaller and more homogeneous groups, forming rectangular areas within data points. Homogeneity is defined here as how pure the splitting nodes are , meaning that there is a higher proportion of one class in each node. We can use the Gini index to compute purity. In a scenario with $K$ classes, each having probability $p_1, \dots, p_K$, the Gini impurity for a certain node is defined as:
 
@@ -334,7 +334,7 @@ $k$-Nearest Neighbors [@cover1967nearest]
 
 : A $k$-Nearest Neighbors model finds the $k$ closest data points to a given input and makes prediction based on the majority class within its neighbors. This model is non-parametric as it does not make assumption about the underlying data.
 
-: ![A point classified in the majority class within its $k = 3$ neighbors.](images/knn.png){#fig-knn width=300}
+: ![A point classified in the majority class within its $k = 3$ neighbors.](images/example_3nn.png){#fig-knn width=300}
 
 To calculate the distance between the input and its neighbors, the Minkowski distance can be used. It is defined as:
 
@@ -443,14 +443,189 @@ For tuning, the training set is used to create five folds which are random parti
 
 ![Data splitting.](images/data-splitting.png){#fig-datasplitting width=300}
 
-To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentionned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction
+To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction.
+
 
 
 ## Results
 
 ### Tuning of hyper-parameters
 
+Here are the tuning grid values used for the feature space parameter (@tbl-grid-fs), the class weights (@tbl-grid-class-weights) and the model hyper-parameters (@tbl-grid-model).
+
+::: {#tbl-grid-fs tbl-pos="H"}
+
+```{r}
+data.frame(
+  param = c("spar", "n_lag", "k"),
+  values = c("0.3, 0.4, 0.5, 0.6, 0.7", "1, 2, 3, 4, 5", "1, 2, 3")
+) |> 
+  gt::gt() |> 
+  gt::cols_label(
+    param = "Parameter",
+    values = "Tuning Grid"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  )
+```
+
+Feature space parameters tuning grid values.
+
+:::
+
+::: {#tbl-grid-class-weights tbl-pos="H"}
+
+```{r}
+options(gt.html_tag_check = FALSE)
+data.frame(
+  strat = c("Event Detection", "Event Detection",  "Phase Detection"),
+  param = c("Weight on negative class", "Weight on positive classes", "Weights on classes"),
+  values = c("1", "40, 60, 80", "Inverse class frequency weights: <br> c(1.89, 0.67, 1.90, 0.69)")
+) |> 
+  gt::gt(groupname_col = "strat") |> 
+  gt::cols_label(
+    param = "Parameter",
+    values = "Tuning Grid"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  ) |> 
+  gt::tab_style(
+    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
+    locations = gt::cells_row_groups()
+  ) |>
+  gt::fmt_markdown()
+```
+
+Class weight tuning grid values.
+
+:::
+
+
+::: {#tbl-grid-model tbl-pos="H"}
+
+```{r}
+data.frame(
+  model = c(
+    "Multinomial Regression", "Multinomial Regression",  
+    "Decision Tree", "Decision Tree",
+    "Bagged Trees", "Bagged Trees",
+    "Random Forest", "Random Forest",
+    "Boosted Trees", "Boosted Trees", "Boosted Trees", "Boosted Trees",
+    "KNN", "KNN",
+    "Neural Network", "Neural Network", "Neural Network"
+  ),
+  param = c(
+    "penalty", "mixture",
+    "tree_depth", "min_n",
+    "tree_depth", "min_n",
+    "trees", "min_n",
+    "trees", "min_n", "tree_depth", "learn_rate",
+    "neighbors", "dist_power",
+    "hidden_units", "learn_rate", "dropout"
+  ),
+  values = c(
+    "0.01, 0.001, 0.0001", "0, 0.25, 0.5, 0.75, 1",
+    "1:15", "2:40",
+    "1:15", "2:40",
+    "100, 300, 500, 700, 900", "2:40",
+    "400, 600, 800, 1000", "20, 40", "5, 8, 12", "0.01",
+    "3, 5, 10, 20", "1, 2",
+    "rep(100, 2), rep(500, 2), rep(100, 3), rep(500, 3), rep(100, 4), rep(500, 4)", "0.01, 0.001", "0.1, 0.3"
+  )
+) |> 
+  gt::gt(groupname_col = "model") |>  
+  gt::cols_label(
+    param = "Parameter",
+    values = "Tuning Grid"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  ) |> 
+  gt::tab_style(
+    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
+    locations = gt::cells_row_groups()
+  )
+```
+
+Model hyper-parameter tuning grid values.
+
+:::
+
+
+For both strategies and each model, we got the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the appendix for the detail of chosen parameters for each model). We then evaluated each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
+
+::: {#tbl-res tbl-pos="H"}
+
+```{r}
+data.frame(
+  model = c("Multinomial Regression", "Decision Tree", "Bagged Trees", "Random Forest", "Boosted Trees", "KNN", "Neural Network"),
+  youden = c("67.6%", "60.0%", "70.3%", "70.5%", "83.0%", "24.0%", "86.5%"),
+  accuracy = c("82.7%", "73.9%", "74.9%", "89.4%", "89.7%", "88.0%", "89.4%")
+) |> 
+  gt::gt() |> 
+  gt::cols_label(
+    model = "Model",
+    youden = "Event detection: weighted Youden index",
+    accuracy = "Phase detection: accuracy"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_fill(color = 'lightgreen'),
+    locations = gt::cells_body(columns = c(youden), rows = 7)
+  ) |>
+  gt::tab_style(
+    style = gt::cell_fill(color = 'lightgreen'),
+    locations = gt::cells_body(columns = c(accuracy), rows = 5)
+  )
+```
+
+Score on the test set for both strategies.
+
+:::
+
+The neural network was selected to detect events and the boosted trees model was selected to detect phases. The next step is to compare the two strategies to choose a model between the two selected ones, to have a final model.
+
+
 ### Selecting a model
+
+To choose a final model, we need to determine the best strategy so we compare the two best models with the real events given by the gold standard.
+
+First, we shorten the times where we want to detect points by keeping only the time range where the gold standard detected the four events perfectly. Indeed, at the start and the end of the session, this tool can miss contact points because the subject is not walking on the mat sensors. At the start of the session, we search for the first "Heel Strike" event appearing in the session which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
+
+When detecting events, the model does not detect only one point corresponding to the event but a window of points containing the event. This means that the predictions are similar to the ones given when detecting phases where the event is part of the predicted phase. We can use the same strategy for both strategy to choose one point either in the windows detected with the event strategy or in the phases predicted with the phase strategy
+
+=> figure of predictions for each strategy?
+
+In each window or phase detected, the following process is applied to keep one point representing the event. We first need to identify each of them correctly:
+
+- a threshold to firstly select only the observations with a high probability of being in the class: $p > 0.4$.
+- a time to know when to distinguish two predicted windows or phases: if the first point of the window $i$ is at more than $t = 40 ms$ from the last point of the window $i-1$, then we consider the windows distinct. This allows to have a window with points that are not necessarily consecutive even if only one event should be detected in this time range.
+
+Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the estimated event.
+
+We can then compare these estimated events with the ones given by the gold standard to see each of the strategy gives closer result.
+
+
 
 ### Performances on the test set
 
@@ -464,3 +639,116 @@ To tune hyper-parameters, automated tuning was used by grid search which is an e
 
 ::: {#refs}
 :::
+
+
+# Appendix
+
+::: {#tbl-tuning-res-events tbl-pos="H"}
+
+```{r}
+data.frame(
+  model = c(
+    rep("Multinomial Regression", 6),
+    rep("Decision Tree", 6),
+    rep("Bagged Trees", 6),
+    rep("Random Forest", 6),
+    rep("Boosted Trees", 8),
+    rep("KNN", 5),
+    rep("Neural Network", 7)
+  ),
+  param = c(
+    "spar", "n_lag", "k", "weight on positive classes", "penalty", "mixture",
+    "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
+    "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
+    "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n",
+    "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n", "tree_depth", "learn_rate",
+    "spar", "n_lag", "k", "neighbors", "dist_power",
+    "spar", "n_lag", "k", "weight on positive classes", "hidden_units", "learn_rate", "dropout"
+  ),
+  values = c(
+    "0.4", "5", "1", "80", "0.0001", "1",
+    "0.3", "5", "1", "80", "5", "7",
+    "0.4", "4", "1", "60", "6", "32",
+    "0.6", "4", "2","80", "900", "40",
+    "0.4", "4", "2", "80", "400", "40", "5", "0.01",
+    "0.4", "5", "5", "5", "2",
+    "0.4", "5", "1", "80", "rep(500, 4)", "0.01", "0.1"
+  )
+) |> 
+  gt::gt(groupname_col = "model") |>  
+  gt::cols_label(
+    param = "Parameter",
+    values = "Optimal value"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  ) |> 
+  gt::tab_style(
+    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
+    locations = gt::cells_row_groups()
+  )
+```
+
+Optimal parameters for event detection for each tuned model.
+
+:::
+
+::: {#tbl-tuning-res-phases tbl-pos="H"}
+
+```{r}
+data.frame(
+  model = c(
+    rep("Multinomial Regression", 4),
+    rep("Decision Tree", 4),
+    rep("Bagged Trees", 4),
+    rep("Random Forest", 4),
+    rep("Boosted Trees", 6),
+    rep("KNN", 4),
+    rep("Neural Network", 5)
+  ),
+  param = c(
+    "spar", "n_lag", "penalty", "mixture",
+    "spar", "n_lag", "tree_depth", "min_n",
+    "spar", "n_lag", "tree_depth", "min_n",
+    "spar", "n_lag", "trees", "min_n",
+    "spar", "n_lag", "trees", "min_n", "tree_depth", "learn_rate",
+    "spar", "n_lag", "neighbors", "dist_power",
+    "spar", "n_lag", "hidden_units", "learn_rate", "dropout"
+  ),
+  values = c(
+    "0.4", "5", "0.0001", "1",
+    "0.6", "4", "6", "13",
+    "0.4", "4", "8", "40",
+    "0.7", "5", "900", "2",
+    "0.7", "5", "900", "3", "12", "0.1",
+    "0.7", "5", "10", "1",
+    "0.4", "4", "rep(500, 3)", "0.1", "0.1"
+  )
+) |> 
+  gt::gt(groupname_col = "model") |>  
+  gt::cols_label(
+    param = "Parameter",
+    values = "Optimal value"
+  ) |> 
+  gt::sub_missing() |> 
+  gt::opt_stylize(style = 6, color = 'gray') |> 
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = "vertical-align:top", 
+    locations = gt::cells_column_labels()
+  ) |> 
+  gt::tab_style(
+    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
+    locations = gt::cells_row_groups()
+  )
+```
+
+Optimal parameters for phase detection for each tuned model.
+
+:::
+
+
