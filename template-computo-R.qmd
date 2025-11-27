@@ -456,7 +456,7 @@ Here are the tuning grid values used for the feature space parameter (@tbl-grid-
 ::: {#tbl-grid-fs tbl-pos="H"}
 
 ```{r}
-data.frame(
+tibble::tibble(
   param = c("spar", "n_lag", "k"),
   values = c("0.3, 0.4, 0.5, 0.6, 0.7", "1, 2, 3, 4, 5", "1, 2, 3")
 ) |> 
@@ -465,13 +465,7 @@ data.frame(
     param = "Parameter",
     values = "Tuning Grid"
   ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  )
+  gt::tab_options(column_labels.background.color = "#616161")
 ```
 
 Feature space parameters tuning grid values.
@@ -481,29 +475,37 @@ Feature space parameters tuning grid values.
 ::: {#tbl-grid-class-weights tbl-pos="H"}
 
 ```{r}
+is_empty <- function(x) {
+  return(x == "")
+}
+
 options(gt.html_tag_check = FALSE)
-data.frame(
+tibble::tibble(
   strat = c("Event Detection", "Event Detection",  "Phase Detection"),
   param = c("Weight on negative class", "Weight on positive classes", "Weights on classes"),
-  values = c("1", "40, 60, 80", "Inverse class frequency weights: <br> c(1.89, 0.67, 1.90, 0.69)")
+  values = c("1", "40, 60, 80", "Inv. class freq.: c(1.89, 0.67, 1.90, 0.69)")
 ) |> 
-  gt::gt(groupname_col = "strat") |> 
-  gt::cols_label(
+  dplyr::group_by(strat) |> 
+  dplyr::mutate(strat = ifelse(dplyr::row_number() == 1, strat, "")) |> 
+  dplyr::ungroup() |> 
+  gt::gt() |> 
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )),
+    locations = list(
+      gt::cells_body(
+        columns = strat,
+        rows = is_empty(strat)
+      )
+    )
+  ) |> gt::cols_label(
+    strat = "Strategy",
     param = "Parameter",
     values = "Tuning Grid"
-  ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  ) |> 
-  gt::tab_style(
-    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
-    locations = gt::cells_row_groups()
-  ) |>
-  gt::fmt_markdown()
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
 Class weight tuning grid values.
@@ -514,51 +516,54 @@ Class weight tuning grid values.
 ::: {#tbl-grid-model tbl-pos="H"}
 
 ```{r}
-data.frame(
-  model = c(
-    "Multinomial Regression", "Multinomial Regression",  
-    "Decision Tree", "Decision Tree",
-    "Bagged Trees", "Bagged Trees",
-    "Random Forest", "Random Forest",
-    "Boosted Trees", "Boosted Trees", "Boosted Trees", "Boosted Trees",
-    "KNN", "KNN",
-    "Neural Network", "Neural Network", "Neural Network"
-  ),
-  param = c(
-    "penalty", "mixture",
-    "tree_depth", "min_n",
-    "tree_depth", "min_n",
-    "trees", "min_n",
-    "trees", "min_n", "tree_depth", "learn_rate",
-    "neighbors", "dist_power",
-    "hidden_units", "learn_rate", "dropout"
-  ),
-  values = c(
-    "0.01, 0.001, 0.0001", "0, 0.25, 0.5, 0.75, 1",
-    "1:15", "2:40",
-    "1:15", "2:40",
-    "100, 300, 500, 700, 900", "2:40",
-    "400, 600, 800, 1000", "20, 40", "5, 8, 12", "0.01",
-    "3, 5, 10, 20", "1, 2",
-    "rep(100, 2), rep(500, 2), rep(100, 3), rep(500, 3), rep(100, 4), rep(500, 4)", "0.01, 0.001", "0.1, 0.3"
-  )
-) |> 
-  gt::gt(groupname_col = "model") |>  
-  gt::cols_label(
+tibble::tibble(model = c(
+  "Multinomial Regression", "Multinomial Regression",  
+  "Decision Tree", "Decision Tree",
+  "Bagged Trees", "Bagged Trees",
+  "Random Forest", "Random Forest",
+  "Boosted Trees", "Boosted Trees", "Boosted Trees", "Boosted Trees",
+  "KNN", "KNN",
+  "Neural Network", "Neural Network", "Neural Network"
+),
+param = c(
+  "penalty", "mixture",
+  "tree_depth", "min_n",
+  "tree_depth", "min_n",
+  "trees", "min_n",
+  "trees", "min_n", "tree_depth", "learn_rate",
+  "neighbors", "dist_power",
+  "hidden_units", "learn_rate", "dropout"
+),
+values = c(
+  "0.01, 0.001, 0.0001", "0, 0.25, 0.5, 0.75, 1",
+  "1:15", "2:40",
+  "1:15", "2:40",
+  "100, 300, 500, 700, 900", "2:40",
+  "400, 600, 800, 1000", "20, 40", "5, 8, 12", "0.01",
+  "3, 5, 10, 20", "1, 2",
+  "hidden layers: 2:5; nodes: 100, 500", "0.01, 0.001", "0.1, 0.3"
+)) |> 
+  dplyr::group_by(model) |> 
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |> 
+  dplyr::ungroup() |> 
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |> gt::cols_label(
+    model = "Model",
     param = "Parameter",
     values = "Tuning Grid"
-  ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  ) |> 
-  gt::tab_style(
-    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
-    locations = gt::cells_row_groups()
-  )
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
 Model hyper-parameter tuning grid values.
@@ -573,7 +578,7 @@ For both strategies and each model, we got the optimal parameters thanks to tuni
 ```{r}
 data.frame(
   model = c("Multinomial Regression", "Decision Tree", "Bagged Trees", "Random Forest", "Boosted Trees", "KNN", "Neural Network"),
-  youden = c("67.6%", "60.0%", "70.3%", "70.5%", "83.0%", "24.0%", "86.5%"),
+  youden = c("67.6%", "60.0%", "70.3%", "70.5%", "83.0%", "24.0%", "88.7%"),
   accuracy = c("82.7%", "73.9%", "74.9%", "89.4%", "89.7%", "88.0%", "89.4%")
 ) |> 
   gt::gt() |> 
@@ -582,13 +587,7 @@ data.frame(
     youden = "Event detection: weighted Youden index",
     accuracy = "Phase detection: accuracy"
   ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |> 
   gt::tab_style(
     style = gt::cell_fill(color = 'lightgreen'),
     locations = gt::cells_body(columns = c(youden), rows = 7)
@@ -641,56 +640,59 @@ We can then compare these estimated events with the ones given by the gold stand
 :::
 
 
-# Appendix
+# Appendix {.unnumbered}
 
 ::: {#tbl-tuning-res-events tbl-pos="H"}
 
 ```{r}
-data.frame(
-  model = c(
-    rep("Multinomial Regression", 6),
-    rep("Decision Tree", 6),
-    rep("Bagged Trees", 6),
-    rep("Random Forest", 6),
-    rep("Boosted Trees", 8),
-    rep("KNN", 5),
-    rep("Neural Network", 7)
-  ),
-  param = c(
-    "spar", "n_lag", "k", "weight on positive classes", "penalty", "mixture",
-    "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
-    "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
-    "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n",
-    "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n", "tree_depth", "learn_rate",
-    "spar", "n_lag", "k", "neighbors", "dist_power",
-    "spar", "n_lag", "k", "weight on positive classes", "hidden_units", "learn_rate", "dropout"
-  ),
-  values = c(
-    "0.4", "5", "1", "80", "0.0001", "1",
-    "0.3", "5", "1", "80", "5", "7",
-    "0.4", "4", "1", "60", "6", "32",
-    "0.6", "4", "2","80", "900", "40",
-    "0.4", "4", "2", "80", "400", "40", "5", "0.01",
-    "0.4", "5", "5", "5", "2",
-    "0.4", "5", "1", "80", "rep(500, 4)", "0.01", "0.1"
-  )
-) |> 
-  gt::gt(groupname_col = "model") |>  
-  gt::cols_label(
+tibble::tibble(model = c(
+  rep("Multinomial Regression", 6),
+  rep("Decision Tree", 6),
+  rep("Bagged Trees", 6),
+  rep("Random Forest", 6),
+  rep("Boosted Trees", 8),
+  rep("KNN", 5),
+  rep("Neural Network", 7)
+),
+param = c(
+  "spar", "n_lag", "k", "weight on positive classes", "penalty", "mixture",
+  "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
+  "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
+  "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n",
+  "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n", "tree_depth", "learn_rate",
+  "spar", "n_lag", "k", "neighbors", "dist_power",
+  "spar", "n_lag", "k", "weight on positive classes", "hidden_units", "learn_rate", "dropout"
+),
+values = c(
+  "0.4", "5", "1", "80", "0.0001", "1",
+  "0.3", "5", "1", "80", "5", "7",
+  "0.4", "4", "1", "60", "6", "32",
+  "0.6", "4", "2","80", "900", "40",
+  "0.4", "4", "2", "80", "400", "40", "5", "0.01",
+  "0.4", "5", "5", "5", "2",
+  "0.4", "5", "1", "80", "rep(500, 4)", "0.01", "0.1"
+)) |> 
+  dplyr::group_by(model) |> 
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |> 
+  dplyr::ungroup() |> 
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |> gt::cols_label(
+    model = "Model",
     param = "Parameter",
-    values = "Optimal value"
-  ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  ) |> 
-  gt::tab_style(
-    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
-    locations = gt::cells_row_groups()
-  )
+    values = "Tuning Grid"
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
 Optimal parameters for event detection for each tuned model.
@@ -700,55 +702,56 @@ Optimal parameters for event detection for each tuned model.
 ::: {#tbl-tuning-res-phases tbl-pos="H"}
 
 ```{r}
-data.frame(
-  model = c(
-    rep("Multinomial Regression", 4),
-    rep("Decision Tree", 4),
-    rep("Bagged Trees", 4),
-    rep("Random Forest", 4),
-    rep("Boosted Trees", 6),
-    rep("KNN", 4),
-    rep("Neural Network", 5)
-  ),
-  param = c(
-    "spar", "n_lag", "penalty", "mixture",
-    "spar", "n_lag", "tree_depth", "min_n",
-    "spar", "n_lag", "tree_depth", "min_n",
-    "spar", "n_lag", "trees", "min_n",
-    "spar", "n_lag", "trees", "min_n", "tree_depth", "learn_rate",
-    "spar", "n_lag", "neighbors", "dist_power",
-    "spar", "n_lag", "hidden_units", "learn_rate", "dropout"
-  ),
-  values = c(
-    "0.4", "5", "0.0001", "1",
-    "0.6", "4", "6", "13",
-    "0.4", "4", "8", "40",
-    "0.7", "5", "900", "2",
-    "0.7", "5", "900", "3", "12", "0.1",
-    "0.7", "5", "10", "1",
-    "0.4", "4", "rep(500, 3)", "0.1", "0.1"
-  )
-) |> 
-  gt::gt(groupname_col = "model") |>  
-  gt::cols_label(
+tibble::tibble(model = c(
+  rep("Multinomial Regression", 4),
+  rep("Decision Tree", 4),
+  rep("Bagged Trees", 4),
+  rep("Random Forest", 4),
+  rep("Boosted Trees", 6),
+  rep("KNN", 4),
+  rep("Neural Network", 5)
+),
+param = c(
+  "spar", "n_lag", "penalty", "mixture",
+  "spar", "n_lag", "tree_depth", "min_n",
+  "spar", "n_lag", "tree_depth", "min_n",
+  "spar", "n_lag", "trees", "min_n",
+  "spar", "n_lag", "trees", "min_n", "tree_depth", "learn_rate",
+  "spar", "n_lag", "neighbors", "dist_power",
+  "spar", "n_lag", "hidden_units", "learn_rate", "dropout"
+),
+values = c(
+  "0.4", "5", "0.0001", "1",
+  "0.6", "4", "6", "13",
+  "0.4", "4", "8", "40",
+  "0.7", "5", "900", "2",
+  "0.7", "5", "900", "3", "12", "0.1",
+  "0.7", "5", "10", "1",
+  "0.4", "4", "rep(500, 3)", "0.1", "0.1"
+)) |> 
+  dplyr::group_by(model) |> 
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |> 
+  dplyr::ungroup() |> 
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |> gt::cols_label(
+    model = "Model",
     param = "Parameter",
-    values = "Optimal value"
-  ) |> 
-  gt::sub_missing() |> 
-  gt::opt_stylize(style = 6, color = 'gray') |> 
-  gt::cols_align(align = "center") |> 
-  gt::tab_style(
-    style = "vertical-align:top", 
-    locations = gt::cells_column_labels()
-  ) |> 
-  gt::tab_style(
-    style = list(gt::cell_fill(color = 'lightblue'), gt::cell_text(weight = "bold")),
-    locations = gt::cells_row_groups()
-  )
+    values = "Tuning Grid"
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
 Optimal parameters for phase detection for each tuned model.
 
 :::
-
-
