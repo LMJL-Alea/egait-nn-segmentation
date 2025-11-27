@@ -93,41 +93,6 @@ Furthermore, during acquisitions, subjects were walking on the GAITRite© mat, a
 
 Six subjects have been included in this study, each of them walking at different speeds (see @tbl-subjects). 
 
-<!-- +-----+--------+-------+-------------------------+ -->
-<!-- | ID  | Gender | Age   | Speed (cm/s)            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | MBA | M      | 50-60 | - Slow : 60             | -->
-<!-- |     |        |       | - Intermediate : 116    | -->
-<!-- |     |        |       | - Normal : 145          | -->
-<!-- |     |        |       | - Fast : 199            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | MBO | F      | 20-30 | - Slow : 73             | -->
-<!-- |     |        |       | - Intermediate : 122    | -->
-<!-- |     |        |       | - Normal : 145          | -->
-<!-- |     |        |       | - Fast : 188            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | MSI | F      | 20-30 | - Slow : 67             | -->
-<!-- |     |        |       | - Intermediate : 115    | -->
-<!-- |     |        |       | - Normal : 148          | -->
-<!-- |     |        |       | - Fast : 179            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | MTR | M      | 20-30 | - Slow : 77             | -->
-<!-- |     |        |       | - Normal : 132          | -->
-<!-- |     |        |       | - Fast : 185            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | NNE | F      | 20-30 | - Slow :  57            | -->
-<!-- |     |        |       | - Intermediate : 116    | -->
-<!-- |     |        |       | - Normal : 147          | -->
-<!-- |     |        |       | - Fast : 190            | -->
-<!-- +=====+========+=======+=========================+ -->
-<!-- | TDE | M      | 50-60 | - Slow : 61             | -->
-<!-- |     |        |       | - Normal : 120          | -->
-<!-- |     |        |       | - Fast : 193            | -->
-<!-- +-----+--------+-------+-------------------------+ -->
-
-<!-- : Summary of subjects and walking speeds used for the model. {#tbl-subjects} -->
-
-
 ::: {#tbl-subjects tbl-pos="H"}
 
 ```{r}
@@ -459,12 +424,16 @@ Here are the tuning grid values used for the feature space parameter (@tbl-grid-
 tibble::tibble(
   param = c("spar", "n_lag", "k"),
   values = c("0.3, 0.4, 0.5, 0.6, 0.7", "1, 2, 3, 4, 5", "1, 2, 3")
-) |> 
+) |>
   gt::gt() |> 
   gt::cols_label(
     param = "Parameter",
     values = "Tuning Grid"
   ) |> 
+  gt::cols_align(
+    align = "left",
+    columns = values
+  ) |>
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
@@ -595,6 +564,8 @@ data.frame(
   gt::tab_style(
     style = gt::cell_fill(color = 'lightgreen'),
     locations = gt::cells_body(columns = c(accuracy), rows = 5)
+  ) |> gt::cols_width(
+    everything() ~ px(200)
   )
 ```
 
@@ -607,22 +578,28 @@ The neural network was selected to detect events and the boosted trees model was
 
 ### Selecting a model
 
-To choose a final model, we need to determine the best strategy so we compare the two best models with the real events given by the gold standard.
+To choose a final model, we need to determine the best strategy. In order to do so, we compare the two best models with the real events given by the gold standard to see which model gives closer results.
 
-First, we shorten the times where we want to detect points by keeping only the time range where the gold standard detected the four events perfectly. Indeed, at the start and the end of the session, this tool can miss contact points because the subject is not walking on the mat sensors. At the start of the session, we search for the first "Heel Strike" event appearing in the session which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
+First, we shorten the time series to retain the times where we want to detect points by keeping only the time range where the gold standard detected the four events perfectly. Indeed, at the start and the end of the session, this tool can miss contact points because the subject is not walking on the mat sensors. At the start of the session, we search for the first "Heel Strike" event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
 
-When detecting events, the model does not detect only one point corresponding to the event but a window of points containing the event. This means that the predictions are similar to the ones given when detecting phases where the event is part of the predicted phase. We can use the same strategy for both strategy to choose one point either in the windows detected with the event strategy or in the phases predicted with the phase strategy
+In both strategies, the model does not detect only one point corresponding to the event but a window of points containing the event (see @fig-res-pred-events and @fig-res-pred-phases). This means that we need to build a procedure to get precise estimated event times from the model predictions. We can use the same process for both strategies to choose one point either in the windows detected with the event strategy or in the sub-phases predicted with the phase strategy.
 
-=> figure of predictions for each strategy?
+::: {layout="[45, -10, 45]"}
 
-In each window or phase detected, the following process is applied to keep one point representing the event. We first need to identify each of them correctly:
+![Example of predictions made by the neural network when predicting events.](images/preds-events.png){#fig-res-pred-events width=250}
 
-- a threshold to firstly select only the observations with a high probability of being in the class: $p > 0.4$.
-- a time to know when to distinguish two predicted windows or phases: if the first point of the window $i$ is at more than $t = 40 ms$ from the last point of the window $i-1$, then we consider the windows distinct. This allows to have a window with points that are not necessarily consecutive even if only one event should be detected in this time range.
+![Example of predictions made by the boosted trees when predicting phases.](images/preds-phases.png){#fig-res-pred-phases width=250}
 
-Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the estimated event.
+:::
 
-We can then compare these estimated events with the ones given by the gold standard to see each of the strategy gives closer result.
+In each window or phase detected, the following process is applied to keep one point representing the event. We first need to identify each of them correctly, using the two following parameter:
+
+- A threshold to firstly select only the observations with a high probability of being in the class: $p > 0.4$.
+- A time to know when to distinguish two predicted windows or phases: if the first point of the window $i$ is at more than $t = 40 ms$ from the last point of the window $i-1$ we consider the windows distinct. It enables us to define unique windows with points that are not necessarily consecutive when only one event should be detected in this time range.
+
+Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the time of the estimated event.
+
+We can then compare these estimated events with the ones given by the gold standard to see which of the strategy gives better result and select a final strategy.
 
 
 
