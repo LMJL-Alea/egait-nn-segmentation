@@ -48,7 +48,6 @@ In this application, the sensor orientation is the rotation between the referenc
 Therefore, the IMU returns unit quaternion time-series allowing the study of the 3D hip rotation over time, as four-component vectors.
 
 
-
 ## State of the art
 
 In the past, several methods for gait cycle segmentation have been studied based on signals recorded from wearable sensors placed on different parts of the body. We try in this part to give an overview of proposed methods by grouping them into categories, with variations related to the position of sensors on the body, the type of sensor measurement system used, and the characteristics of the signal.
@@ -84,14 +83,14 @@ In our research, we did not find studies using a decision tree model to segment 
 
 ## Data acquisition
 
-A wearable sensor was used to record the hip rotation. It contains an acceleromerer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequence of the sensor is 100Hz. With this device, the data acquired is in the form of quaternion time-series, representing the 3D rotation of the hip over time.
+A wearable sensor was used to record the hip rotation. It contains an accelerometer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is 100Hz. With this device, the data acquired is in the form of unit quaternion time-series, representing the 3D rotation of the hip over time.
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
 
-Furthermore, during acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004]. It implies that subjects were walking approximately nine meters on a straight line. This device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times can be used to know when the gait events actually happened. This data is then used to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
+During acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the wearable sensor on their right hip. It implies that subjects were walking approximately nine meters on a straight line. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times can be used to know when the gait events actually happened. This data is then used to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
 
-Six subjects have been included in this study, each of them walking at different speeds (see @tbl-subjects). 
+Six subjects have been included in this study (three men and three women) walking at different speeds to have a variety of gait data (see @tbl-subjects). We have in total 174 walking sessions.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
@@ -227,9 +226,9 @@ Method 1: Predicting gait events
 
 When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, by labeling as part of an event three points rather than just one, the event happens in a window of 30 ms. This strategy also reduces somewhat the imbalance between the class proportions.
 
-Method 2: Predicting phases
+Method 2: Predicting sub-phases
 
-: The second method consists of predicting phases in the signal that are characterized with the gait events. We label each part in the signal between two events as a phase, leading to four classes for our observations:
+: The second method consists of predicting sub-phases in the signal that are characterized with the gait events. We label each part in the signal between two events as a sub-phase, leading to four classes for our observations:
 
 : - Pre-Stance phase: between Right Heel Strike and Left Toe Off
 - Stance phase: between Left Toe Off and Left Heel Strike
@@ -400,21 +399,22 @@ In our case, we chose to put a weight of $0.7$ on the MA Sensitivity to make sur
 
 ## Data splitting and Tuning strategy
 
-To correctly tune and evaluate the model, data is firstly split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to then evaluate the model on data never seen before.
+To correctly tune and evaluate the model, data is initially split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to be able to evaluate the model on data never seen before. We chose to keep entire walking sessions in each set so that the model would never see any observation of the sessions contained in the test set during training. We had 139 sessions in the training set and 35 sessions in the test set.
 
 In certain models such as neural networks, the training set is divided furthermore into a train and a validation set, containing 80% and 20% of the training set respectively. In this case, the model computes the predictions on the train set and the loss over the validation set to determine the model parameters.
 
-For tuning, the training set is used to create five folds which are random partitions of the training set to get five equal sized subsamples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
+For tuning, the training set is used to create five folds which are random partitions of the training set to get five equal sized sub-samples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
 
 ![Data splitting.](images/data-splitting.png){#fig-datasplitting width=300}
 
 To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction.
 
 
-
 ## Results
 
 ### Tuning of hyper-parameters
+
+In order to choose the best model for each strategy, we tuned the hyper-parameter of each model for both strategies. Since we do not use the same metric to tune and evaluate models if we detect events or sub-phases, we cannot directly choose a strategy at this step. Therefore, we select one model per strategy and compare the two strategies later.
 
 Here are the tuning grid values used for the feature space parameter (@tbl-grid-fs), the class weights (@tbl-grid-class-weights) and the model hyper-parameters (@tbl-grid-model).
 
@@ -539,8 +539,7 @@ Model hyper-parameter tuning grid values.
 
 :::
 
-
-For both strategies and each model, we got the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the appendix for the detail of chosen parameters for each model). We then evaluated each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
+For each strategy and each model, we get the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the appendix for the detail of chosen parameters for each model). We then evaluate each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
 
 ::: {#tbl-res tbl-pos="H"}
 
@@ -573,23 +572,27 @@ Score on the test set for both strategies.
 
 :::
 
-The neural network was selected to detect events and the boosted trees model was selected to detect phases. The next step is to compare the two strategies to choose a model between the two selected ones, to have a final model.
+To maximize the scores on the test set, the neural network was selected to detect events and the boosted trees model was selected to detect phases. We can note that for the second strategy, three models (the random forest, the boosted trees and the neural network) had close results between 89.4% and 89.7%. However, since all models had really quick computing times to make predictions on the test set, this was not a criteria to choose one model over another one, so we could simply choose the model giving the highest score.
+
+Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one, leading to a final model making the best predictions.
 
 
-### Selecting a model
+### Selecting a strategy
 
-To choose a final model, we need to determine the best strategy. In order to do so, we compare the two best models with the real events given by the gold standard to see which model gives closer results.
+To choose a final model, we need to determine the best strategy. In order to do so, we compare the two previously selected models with the real events given by the gold standard to see which model gives closer results. We still use the test set to evaluate the strategies.
 
 First, we shorten the time series to retain the times where we want to detect points by keeping only the time range where the gold standard detected the four events perfectly. Indeed, at the start and the end of the session, this tool can miss contact points because the subject is not walking on the mat sensors. At the start of the session, we search for the first "Heel Strike" event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
 
-In both strategies, the model does not detect only one point corresponding to the event but a window of points containing the event (see @fig-res-pred-events and @fig-res-pred-phases). This means that we need to build a procedure to get precise estimated event times from the model predictions. We can use the same process for both strategies to choose one point either in the windows detected with the event strategy or in the sub-phases predicted with the phase strategy.
+In both strategies, the model does not detect only one point corresponding to the event but a window of points containing the event (see @fig-preds-both-strategies). This means that we need to build a procedure to get precise estimated event times from the model predictions. When predicting sub-phases, the event corresponding to the sub-phase is theoretically located at the start of the sub-phase but we see that it is not always the case with our model's predictions. Hence we use the same process for both strategies to choose one point either in the windows detected with the event strategy or in the sub-phases predicted with the phase strategy.
 
-::: {layout="[45, -10, 45]"}
 
-![Example of predictions made by the neural network when predicting events.](images/preds-events.png){#fig-res-pred-events width=250}
+::: {#fig-preds-both-strategies layout="[45, -10, 45]"}
 
-![Example of predictions made by the boosted trees when predicting phases.](images/preds-phases.png){#fig-res-pred-phases width=250}
+![Predictions made by the neural network when predicting events.](images/preds_events_and_real_events.png){#fig-preds-events width=270}
 
+![Predictions made by the boosted trees when predicting phases.](images/preds_phases_and_real_events.png){#fig-preds-phases width=270}
+
+Predictions from both strategies. The bigger and darker points represent the real time of events.
 :::
 
 In each window or phase detected, the following process is applied to keep one point representing the event. We first need to identify each of them correctly, using the two following parameter:
@@ -597,17 +600,58 @@ In each window or phase detected, the following process is applied to keep one p
 - A threshold to firstly select only the observations with a high probability of being in the class: $p > 0.4$.
 - A time to know when to distinguish two predicted windows or phases: if the first point of the window $i$ is at more than $t = 40 ms$ from the last point of the window $i-1$ we consider the windows distinct. It enables us to define unique windows with points that are not necessarily consecutive when only one event should be detected in this time range.
 
-Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the time of the estimated event.
+Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the time of the estimated event. The last step is to compare these estimated events with the ones given by the gold standard to see which of the strategy gives better result and select a final strategy.
 
-We can then compare these estimated events with the ones given by the gold standard to see which of the strategy gives better result and select a final strategy.
+The first point of comparison is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but it does not allow us to tell them apart. The second item that can be compared is the time at which the events are happening. We plot the mean time difference between real and predicted events for each session in the test set (see @fig-boxplot-comparison).
 
+![Mean time difference between real and predicted events for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=500}
 
+When we detect sub-phases, the "Heel-Strike" events seem to be well estimated but it not the case for the "Toe-Off" events that are predicted too late, about 150ms after the real time of the event. This could mean that for these events, it would give better results to take one of the first points of the detected sub-phase instead of the point with the model highest probability. Since we do not have theoretical explanation of this phenomena, we can not justify the use of different procedure for either "Heel Strike" or "Toe-Off" events. On the other hand, when we detect the events directly, all of the event times are estimated near the real ones with no distinction between classes. For each type of event, the estimated time median is at approximately 50ms before the real event, with a few outliers. Overall, the results given by the event detection are closer to the times given by the gold standard so we retain this strategy. 
 
 ### Performances on the test set
 
-# Discussion and conclusions
+The final selected model is the neural network from the first strategy predicting directly the event times. We evaluate this model on the test set for our three metrics (see @tbl-final-eval) and we perform a more in-depth comparison of the estimated events with the real ones given by the gold standard.
+
+::: {#tbl-final-eval tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  youden = c("88.7%"),
+  sen = c("93.4%"),
+  spe = c("96.4%")
+) |>
+  gt::gt() |> 
+  gt::cols_label(
+    youden = "Weighted Youden Index",
+    sen = "Macro Average Sensitivity",
+    spe = "Macro Average Specificity"
+  ) |> 
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Metrics of the selected model on the test set.
+
+:::
+
+For a complete comparison of our model with the gold standard, we use spatio-temporal parameters that can be computed from the four events happening during a walking cycle: the number of cycles in a session, the cycle lengths and the percentage of stance phase. We compute the mean value for these parameters on each session from the test set and for each foot by computing the gait cycles starting with the right and the left foot. For the number of cycles in each session, we find the exact same number of cycles for our model and the gold standard, which is not surprising since we previously shown that the model detects the correct number of each event in every sessions. For the mean cycle lengths and the mean percentage of stance phase, we use Bland-Altman plots [@bland_altman] to compare the the results (see @fig-bland-altman).
+
+::: {#fig-bland-altman layout="[45, -10, 45]"}
+
+![Comparison of the mean cycle length (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
+
+![Comparison of the mean stance percentage.](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
+
+Bland-Altman plots to compare our model with the gold standard on spatio-temporal parameters.
+:::
+
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle lengths, the differences between the two methods are between -26ms and 21ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between -8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
 
 
+# Discussion and conclusions (WIP)
+
+We compared two strategies to detect events during gait cycles: predicting directly the gait events or predicting sub-phases in between these events. We selected a model for both strategies, a neural network for the first one and a boosted trees model for the second one, by tuning and evaluating various classification models on different metrics: a generalized weighted Youden index for event detection and accuracy for sub-phases detection. By comparing the two models with the reference events given by the gold standard GAITRite©, we chose to keep the first strategy detecting directly the events as it shown more coherent results. The selected model is a neural network containing four hidden layers having each 500 nodes, with higher class weights on the minority classes of interest to address the issue of imbalance data. This model performs well on the test set as we get similar results than the ones provided by the reference method, as for the number of gait cycles, their lengths, and the percentage of stance phase in gait cycles.
+
+Since this model was trained on healthy subjects, we expect less performance on data from patients with gait disorders as their gait would be less regular. To improve our model so it better generalizes on various subjects, we could acquire data on more subjects in various age groups. We could also use transfer learning to go from this model trained on healthy subject to a model specialized for subjects having gait disorders. Finally, we could perform rotation correction or use rotation-invariant features to counter the issue of the referential being different between subjects. 
 
 
 
