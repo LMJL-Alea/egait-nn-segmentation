@@ -58,11 +58,11 @@ Search for feature points: Peak Detection and zero-crossing
 
 Analysis of dynamic properties: Wavelet Transform
 
-: To detect gait events in recorded signals, another used method is wavelet transform because it allows detection of a specified frequency at a specified time. This method has been used to detect Heel-Strike and Toe-off events on an angular velocity signal by using multi-resolution wavelet decomposition [@aminian2002spatio]. The signal is decomposed into wavelet packages, using high-scale and low-scale filters. In @mccamley2012enhanced, the signal of the vertical acceleration is smoothed by integrating and then differentiating using a Gaussian Continuous Wavelet Transform (CTW). Events are found on minima and maxima of the differentiated signal. Furthemore, a method called Sparsity-assisted wavelet denoising (SWAD) has been developed to segment the signal in three events: midstance, toe-off and heel-strike [@prateek2019gait]. It uses a combination of linear time invariant filters, wavelets and sparsity based methods to extract a coefficient vector of Discrete Wavelet Transform (DTW). That generates a sparse template of moving segments of gyroscope measurements.
+: To detect gait events in recorded signals, another used method is wavelet transform because it allows detection of a specified frequency at a specified time. This method has been used to detect Heel-Strike and Toe-off events on an angular velocity signal by using multi-resolution wavelet decomposition [@aminian2002spatio]. The signal is decomposed into wavelet packages, using high-scale and low-scale filters. In @mccamley2012enhanced, the signal of the vertical acceleration is smoothed by integrating and then differentiating using a Gaussian Continuous Wavelet Transform (CTW). Events are found on minima and maxima of the differentiated signal. Furthermore, a method called Sparsity-assisted wavelet denoising (SWAD) has been developed to segment the signal in three events: mid-stance, toe-off and heel-strike [@prateek2019gait]. It uses a combination of linear time invariant filters, wavelets and sparsity based methods to extract a coefficient vector of Discrete Wavelet Transform (DTW). That generates a sparse template of moving segments of gyroscope measurements.
 
 Pattern-matching: Dynamic Time Warping (DTW)
 
-: To segment signals, another method is pattern-matching. Dynamic Time Warping is widely used for this matter. It allows identification of patterns with different length and it matches signals non-linearly. Thus it is commonly used to evaluate the similarity between time series. This method has been used on an acceleration signal to identify gait cycles [@ghersi2020gait]. In another study, multi-dimensional subsequence DTW (msDTW) was used to segment strides using informations from different axes of an accelerometer and a gyroscope at the same time [@barth2015stride].
+: To segment signals, another method is pattern-matching. Dynamic Time Warping is widely used for this matter. It allows identification of patterns with different length and it matches signals non-linearly. Thus it is commonly used to evaluate the similarity between time series. This method has been used on an acceleration signal to identify gait cycles [@ghersi2020gait]. In another study, multi-dimensional subsequence DTW (msDTW) was used to segment strides using information from different axes of an accelerometer and a gyroscope at the same time [@barth2015stride].
 
 Hidden Markov Models
 
@@ -70,16 +70,15 @@ Hidden Markov Models
 
 Other Machine Learning methods
 
-: Many studies on gait analysis use wearable sensors and machine learning. A study showed that most used methods for this purpose are SVM and CNN, and are largely used to detect diseases or recognize activities when analyzing gait data [@saboor2020latest]. SVM divides a set of objects into classes with widest possible margin at the hyperplane boundaries. Neural Networks use interconnected nodes organized in layers to process informations and learn patterns through back-propagation and make predictions using activation functions.
+: Many studies on gait analysis use wearable sensors and machine learning. A study showed that most used methods for this purpose are SVM and CNN, and are largely used to detect diseases or recognize activities when analyzing gait data [@saboor2020latest]. SVM divides a set of objects into classes with widest possible margin at the hyperplane boundaries. Neural Networks use interconnected nodes organized in layers to process information and learn patterns through back-propagation and make predictions using activation functions.
 
 : Studies show good results when using machine learning to classify gait of patients having trouble walking, for instance patients with Parkinson Disease [@tahir2012parkinson;@wahid2015classification], or to extract gait parameters [@rampp2014inertial;@hannink2016sensor]. These studies mostly use Artificial Neural Networks but do not address the problem of the segmentation of the signal recorded by the sensors. Similarly, in @farah2019design, a logistic regression tree is used to classify gait phases in a stride but not to directly segment the signal into strides.
 
 : For the segmentation matter, Recurrent Neural Networks have shown good results for identifying Heel-Strike and Toe-off events with pressure sensors, accelerations and Euler angles [@prado2019gait]. Another study compared unsupervised machine learning (k-means) with supervised one (SVM and CNN), showing that CNNs were performing the best to predict stance and swing phases [@potluri2019machine]. Lastly, in another study, 24 time series from three sensors’ accelerometers and gyroscopes were used as input into a 6 layers CNN to estimate the likelihood of the corresponding input sample, given a specific gait event [@gadaleta2019deep]. For instance, the signal can be segmented with the initial contact of the right foot if this gait event is chosen in the model. This method was shown to perform better than a Wavelet Transform algorithm.
 
-In our research, we did not find studies using a decision tree model to segment the sensor signal into strides.
 
 
-# Proposed segmentation model
+# Material
 
 ## Data acquisition
 
@@ -205,6 +204,7 @@ Walking speed
 
 The feature space depends on two hyper-parameters. The first one is a smoothness parameter *spar* for the time-serie curves, as derivation is used to compute some variables. It is contained in $]0,1]$ and is used to fit a cubic smoothing spline to the time-serie. The second one is the *lag* parameter, to keep at the time $t_p$ the information from the time $t_{p-1}, \dots, t_{p-lag}$. That parameter implies that the feature space contains $10 + 9 \times lag$ variables.
 
+# Methods
 
 ## Classification strategies
 
@@ -271,7 +271,7 @@ $${#eq-loglikelihood}
 : When we have a large set of variables, we can regularized the estimation by introducing penalty terms in the log-likelihood function. The two main types of penalization are the L1 regularization (also called a Lasso model) and the L2 regularization (also called a Ridge model). The Ridge regression prevents overfitting by adding the term $\lambda \sum_{k=1}^K \beta_k^2$ to the loss function, while the Lasso model selects features by adding the term $\lambda \sum_{k=1}^K |\beta_k|$ to the loss, giving a sparse solution with only some non-zero coordinates. The parameter $\lambda$ is called the regularization parameter.
 
 
-Decision tree [@kuhn2013applied; [@breiman2017classification]]
+Decision tree [@kuhn2013applied; @breiman2017classification]
 
 : Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes. 
 
@@ -323,9 +323,6 @@ $$ {#eq-crossentropy}
 : - $y_k$ the classification probability.
 
 : These models are complex and rely on a efficient algorithm for the parameter update and an adapted activation function, as well as possible utilization of batch normalization, regularization or dropout to find a model with a good complexity for the data. Tuning is done to find the best hyper-parameters such as the number of layers and nodes or the learning rate.
-
-
-# Tuning and comparing segmentation models
 
 ## Dealing with imbalanced data
 
@@ -410,9 +407,9 @@ For tuning, the training set is used to create five folds which are random parti
 To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction.
 
 
-## Results
+# Results
 
-### Tuning of hyper-parameters
+## Tuning of hyper-parameters
 
 In order to choose the best model for each strategy, we tuned the hyper-parameter of each model for both strategies. Since we do not use the same metric to tune and evaluate models if we detect events or sub-phases, we cannot directly choose a strategy at this step. Therefore, we select one model per strategy and compare the two strategies later.
 
@@ -577,7 +574,7 @@ To maximize the scores on the test set, the neural network was selected to detec
 Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one, leading to a final model making the best predictions.
 
 
-### Selecting a strategy
+## Selecting a strategy
 
 To choose a final model, we need to determine the best strategy. In order to do so, we compare the two previously selected models with the real events given by the gold standard to see which model gives closer results. We still use the test set to evaluate the strategies.
 
@@ -608,7 +605,7 @@ The first point of comparison is the number of each event detected during the wa
 
 When we detect sub-phases, the "Heel-Strike" events seem to be well estimated but it not the case for the "Toe-Off" events that are predicted too late, about 150ms after the real time of the event. This could mean that for these events, it would give better results to take one of the first points of the detected sub-phase instead of the point with the model highest probability. Since we do not have theoretical explanation of this phenomena, we can not justify the use of different procedure for either "Heel Strike" or "Toe-Off" events. On the other hand, when we detect the events directly, all of the event times are estimated near the real ones with no distinction between classes. For each type of event, the estimated time median is at approximately 50ms before the real event, with a few outliers. Overall, the results given by the event detection are closer to the times given by the gold standard so we retain this strategy. 
 
-### Performances on the test set
+## Performances on the test set
 
 The final selected model is the neural network from the first strategy predicting directly the event times. We evaluate this model on the test set for our three metrics (see @tbl-final-eval) and we perform a more in-depth comparison of the estimated events with the real ones given by the gold standard.
 
@@ -633,25 +630,27 @@ Metrics of the selected model on the test set.
 
 :::
 
-For a complete comparison of our model with the gold standard, we use spatio-temporal parameters that can be computed from the four events happening during a walking cycle: the number of cycles in a session, the cycle lengths and the percentage of stance phase. We compute the mean value for these parameters on each session from the test set and for each foot by computing the gait cycles starting with the right and the left foot. For the number of cycles in each session, we find the exact same number of cycles for our model and the gold standard, which is not surprising since we previously shown that the model detects the correct number of each event in every sessions. For the mean cycle lengths and the mean percentage of stance phase, we use Bland-Altman plots [@bland_altman] to compare the the results (see @fig-bland-altman).
+For a complete comparison of our model with the gold standard, we use spatio-temporal parameters that can be computed from the four events happening during a walking cycle: the number of cycles in a session, the cycle duration and the percentage of stance phase. We compute the mean value for these parameters on each session from the test set and for each foot by computing the gait cycles starting with the right and the left foot. For the number of cycles in each session, we find the exact same number of cycles for our model and the gold standard, which is not surprising since we previously shown that the model detects the correct number of each event in every sessions. For the mean cycle duration and the mean percentage of stance phase, we use Bland-Altman plots [@bland_altman] to compare the the results (see @fig-bland-altman).
 
 ::: {#fig-bland-altman layout="[45, -10, 45]"}
 
-![Comparison of the mean cycle length (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
+![Comparison of the mean cycle duration (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
 
 ![Comparison of the mean stance percentage.](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
 
 Bland-Altman plots to compare our model with the gold standard on spatio-temporal parameters.
 :::
 
-For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle lengths, the differences between the two methods are between -26ms and 21ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between -8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between -26ms and 21ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between -8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
 
 
-# Discussion and conclusions (WIP)
+# Discussion and conclusions
 
-We compared two strategies to detect events during gait cycles: predicting directly the gait events or predicting sub-phases in between these events. We selected a model for both strategies, a neural network for the first one and a boosted trees model for the second one, by tuning and evaluating various classification models on different metrics: a generalized weighted Youden index for event detection and accuracy for sub-phases detection. By comparing the two models with the reference events given by the gold standard GAITRite©, we chose to keep the first strategy detecting directly the events as it shown more coherent results. The selected model is a neural network containing four hidden layers having each 500 nodes, with higher class weights on the minority classes of interest to address the issue of imbalance data. This model performs well on the test set as we get similar results than the ones provided by the reference method, as for the number of gait cycles, their lengths, and the percentage of stance phase in gait cycles.
+We compared two strategies to detect events during gait cycles: predicting directly the gait events or predicting sub-phases in between these events. We selected a model for both strategies, a neural network for the first one and a boosted trees model for the second one, by tuning and evaluating various classification models on different metrics: a generalized weighted Youden index for event detection and accuracy for sub-phases detection. By comparing the two models with the reference events given by the gold standard GAITRite©, we chose to keep the first strategy detecting directly the events as it shown more coherent results. The selected model is a neural network containing four hidden layers each having 500 nodes, with higher class weights on the minority classes of interest to address the issue of imbalance classes This model performs well on the test set as we get similar results than the ones provided by the reference method, as for the number of gait cycles, their duration, and the percentage of stance phase in each gait cycles.
 
-Since this model was trained on healthy subjects, we expect less performance on data from patients with gait disorders as their gait would be less regular. To improve our model so it better generalizes on various subjects, we could acquire data on more subjects in various age groups. We could also use transfer learning to go from this model trained on healthy subject to a model specialized for subjects having gait disorders. Finally, we could perform rotation correction or use rotation-invariant features to counter the issue of the referential being different between subjects. 
+Since this model was trained on healthy subjects, we expect less performance on data from patients with gait disorders as their gait would be less regular. Indeed, the model was tested on a data set containing gait data from 44 multiple sclerosis patients, each walking approximately 7 meters while wearing the IMU. As we don't have reference points for this data set, the evaluation of the model's predictions was visual. For each time-serie, we plotted the predictions and rated them in three classes: perfect performance (the model detects all four events in the correct order for all the sessions), moderate performance (the model misses a few events but correctly segments the signal into cycles) and poor performance (the model misses most events). Within the 44 patients, we counted 20 perfect performances, 19 moderate performances and 5 poor performances, hence the model works perfectly for 45% of the data set and works poorly on only 11% of the data set. We can note that some of the recorded signals seem to have anomalies such as abnormal spikes, aside from the fact that unhealthy gaits are not necessarily regulars. Therefore, the results are promising.
+
+To improve our model so it better generalizes on various subjects especially with gait disorders, we could acquire data on more subjects in various age groups. We could also use transfer learning to go from this model trained on healthy subject to a model specialized for subjects having gait disorders. Finally, we could perform rotation correction or use rotation-invariant features to counter the issue of the referential being different between subjects. 
 
 
 
@@ -712,7 +711,7 @@ values = c(
   ) |> gt::cols_label(
     model = "Model",
     param = "Parameter",
-    values = "Tuning Grid"
+    values = "Optimal value"
   ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
@@ -769,7 +768,7 @@ values = c(
   ) |> gt::cols_label(
     model = "Model",
     param = "Parameter",
-    values = "Tuning Grid"
+    values = "Optimal value"
   ) |> gt::tab_options(column_labels.background.color = "#616161")
 ```
 
