@@ -353,7 +353,7 @@ In classification problems, the most widely used metric is accuracy which is def
 
 In the case of severe imbalanced classes like in our first strategy where we directly predict events, we cannot use accuracy to correctly evaluate the model. Indeed, since the model will predict almost only the majority class which is the negative one, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
 
-We need to use other metrics that are adapted for this situation. An important tool is the confusion matrix which indicate the number of predictions in each class compared to the real values of the observations.
+We need to use other metrics that are adapted to this situation. An important tool is the confusion matrix which indicate the number of predictions in each class compared to the real classes of the observations.
 
 In a binary classification, The matrix contains the values of the True Positives ($TP$), False Positives ($FP$), True Negatives ($TN$) and False Negatives ($FN$). Two of the metrics that can be calculated from this matrix are known as Sensitivity and Specificity. They are defined as follow:
 
@@ -365,7 +365,7 @@ $$
 \text{Specificity} = \frac{TN}{TN+FP}
 $${#eq-specificity}
 
-The Sensitivity measures how well the model has found all occurences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
+The Sensitivity measures how well the model has found all occurrences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
 
 In a multiclass classification, we can extend these metrics to use them with a different number of positive classes. In our case, we have four classes containing less observations and having to be correctly predicted, while the other class is the majority class. 
 
@@ -431,6 +431,10 @@ tibble::tibble(
     align = "left",
     columns = values
   ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = param)
+  ) |> 
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
@@ -492,13 +496,13 @@ tibble::tibble(model = c(
   "Neural Network", "Neural Network", "Neural Network"
 ),
 param = c(
-  "penalty", "mixture",
-  "tree_depth", "min_n",
-  "tree_depth", "min_n",
-  "trees", "min_n",
-  "trees", "min_n", "tree_depth", "learn_rate",
-  "neighbors", "dist_power",
-  "hidden_units", "learn_rate", "dropout"
+  "`penalty`", "`mixture`",
+  "`tree_depth`", "`min_n`",
+  "`tree_depth`", "`min_n`",
+  "`trees`", "`min_n`",
+  "`trees`", "`min_n`", "`tree_depth`", "`learn_rate`",
+  "`neighbors`", "`dist_power`",
+  "`hidden_units`", "`learn_rate`", "`dropout`"
 ),
 values = c(
   "0.01, 0.001, 0.0001", "0, 0.25, 0.5, 0.75, 1",
@@ -529,7 +533,8 @@ values = c(
     model = "Model",
     param = "Parameter",
     values = "Tuning Grid"
-  ) |> gt::tab_options(column_labels.background.color = "#616161")
+  ) |> gt::tab_options(column_labels.background.color = "#616161") |> 
+  gt::fmt_markdown(columns = param)
 ```
 
 Model hyper-parameter tuning grid values.
@@ -583,7 +588,7 @@ First, we shorten the time series to retain the times where we want to detect po
 In both strategies, the model does not detect only one point corresponding to the event but a window of points containing the event (see @fig-preds-both-strategies). This means that we need to build a procedure to get precise estimated event times from the model predictions. When predicting sub-phases, the event corresponding to the sub-phase is theoretically located at the start of the sub-phase but we see that it is not always the case with our model's predictions. Hence we use the same process for both strategies to choose one point either in the windows detected with the event strategy or in the sub-phases predicted with the phase strategy.
 
 
-::: {#fig-preds-both-strategies layout="[45, -10, 45]"}
+::: {#fig-preds-both-strategies layout="[45, -10, 45]" fig-pos="H"}
 
 ![Predictions made by the neural network when predicting events.](images/preds_events_and_real_events.png){#fig-preds-events width=270}
 
@@ -632,7 +637,7 @@ Metrics of the selected model on the test set.
 
 For a complete comparison of our model with the gold standard, we use spatio-temporal parameters that can be computed from the four events happening during a walking cycle: the number of cycles in a session, the cycle duration and the percentage of stance phase. We compute the mean value for these parameters on each session from the test set and for each foot by computing the gait cycles starting with the right and the left foot. For the number of cycles in each session, we find the exact same number of cycles for our model and the gold standard, which is not surprising since we previously shown that the model detects the correct number of each event in every sessions. For the mean cycle duration and the mean percentage of stance phase, we use Bland-Altman plots [@bland_altman] to compare the the results (see @fig-bland-altman).
 
-::: {#fig-bland-altman layout="[45, -10, 45]"}
+::: {#fig-bland-altman layout="[45, -10, 45]" fig-pos="H"}
 
 ![Comparison of the mean cycle duration (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
 
@@ -675,13 +680,13 @@ tibble::tibble(model = c(
   rep("Neural Network", 7)
 ),
 param = c(
-  "spar", "n_lag", "k", "weight on positive classes", "penalty", "mixture",
-  "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
-  "spar", "n_lag", "k", "weight on positive classes", "tree_depth", "min_n",
-  "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n",
-  "spar", "n_lag", "k", "weight on positive classes", "trees", "min_n", "tree_depth", "learn_rate",
-  "spar", "n_lag", "k", "neighbors", "dist_power",
-  "spar", "n_lag", "k", "weight on positive classes", "hidden_units", "learn_rate", "dropout"
+  "spar", "n_lag", "k", "weight on positive classes", "`penalty`", "`mixture`",
+  "spar", "n_lag", "k", "weight on positive classes", "`tree_depth`", "`min_n`",
+  "spar", "n_lag", "k", "weight on positive classes", "`tree_depth`", "`min_n`",
+  "spar", "n_lag", "k", "weight on positive classes", "`trees`", "`min_n`",
+  "spar", "n_lag", "k", "weight on positive classes", "`trees`", "`min_n`", "`tree_depth`", "`learn_rate`",
+  "spar", "n_lag", "k", "`neighbors`", "`dist_power`",
+  "spar", "n_lag", "k", "weight on positive classes", "`hidden_units`", "`learn_rate`", "`dropout`"
 ),
 values = c(
   "0.4", "5", "1", "80", "0.0001", "1",
@@ -708,11 +713,17 @@ values = c(
         rows = is_empty(model)
       )
     )
-  ) |> gt::cols_label(
+  ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = param, rows = param %in% c("spar", "n_lag", "k"))
+  ) |> 
+  gt::cols_label(
     model = "Model",
     param = "Parameter",
     values = "Optimal value"
-  ) |> gt::tab_options(column_labels.background.color = "#616161")
+  ) |> gt::tab_options(column_labels.background.color = "#616161") |> 
+  gt::fmt_markdown(columns = param)
 ```
 
 Optimal parameters for event detection for each tuned model.
@@ -732,13 +743,13 @@ tibble::tibble(model = c(
   rep("Neural Network", 5)
 ),
 param = c(
-  "spar", "n_lag", "penalty", "mixture",
-  "spar", "n_lag", "tree_depth", "min_n",
-  "spar", "n_lag", "tree_depth", "min_n",
-  "spar", "n_lag", "trees", "min_n",
-  "spar", "n_lag", "trees", "min_n", "tree_depth", "learn_rate",
-  "spar", "n_lag", "neighbors", "dist_power",
-  "spar", "n_lag", "hidden_units", "learn_rate", "dropout"
+  "spar", "n_lag", "`penalty`", "`mixture`",
+  "spar", "n_lag", "`tree_depth`", "`min_n`",
+  "spar", "n_lag", "`tree_depth`", "`min_n`",
+  "spar", "n_lag", "`trees`", "`min_n`",
+  "spar", "n_lag", "`trees`", "`min_n`", "`tree_depth`", "`learn_rate`",
+  "spar", "n_lag", "`neighbors`", "`dist_power`",
+  "spar", "n_lag", "`hidden_units`", "`learn_rate`", "`dropout`"
 ),
 values = c(
   "0.4", "5", "0.0001", "1",
@@ -765,11 +776,16 @@ values = c(
         rows = is_empty(model)
       )
     )
+  ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = param, rows = param %in% c("spar", "n_lag"))
   ) |> gt::cols_label(
     model = "Model",
     param = "Parameter",
     values = "Optimal value"
-  ) |> gt::tab_options(column_labels.background.color = "#616161")
+  ) |> gt::tab_options(column_labels.background.color = "#616161") |> 
+  gt::fmt_markdown(columns = param)
 ```
 
 Optimal parameters for phase detection for each tuned model.
