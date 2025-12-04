@@ -1,7 +1,7 @@
 project:
   title: "egait-nn-segmentation"
 
-title: "Gait Segmentation Model for Rotation Time Series Collected by a Wearable Sensor using Machine Learning"
+title: "Gait Event Detection Model for Rotation Time Series Collected by a Wearable Sensor using Machine Learning"
 author:
   - name: Manon Simonot
     email: manon.simonot@univ-nantes.fr
@@ -19,8 +19,24 @@ author:
 date: last-modified
 date-modified: last-modified
 abstract: >+
-  TODO 
-keywords: [todo, todo, todo]
+  Analyzing human gait is essential for various health applications to improve life quality of patients suffering 
+  from gait disorders such as monitoring the elderly. 
+  Wearable sensors are increasingly replacing traditional methods (e.g., motion capture, pressure mats) 
+  because they are smaller, cheaper, and can return quantitative real-life data. 
+  The aim of the method is to detect the specific events defining the human gait cycle that are the right and left 
+  Heel Strike events and the right and left Toe Off events. These events allow in-depth gait analysis by deducing from
+  them a number of spatio-temporal parameters giving crucial information on the patient's health.
+  To build a model, gait data has been acquired in the form of unit quaternion time series representing the 3D 
+  hip rotation over time. Six subjects walked in a straight line wearing a wearable sensor on their right hip while 
+  walking on a reference tool (the GAITRite© pressure mat) at different walking speeds. 
+  Two strategies were compared, one detecting directly the events labeled by the reference method and one 
+  detecting the sub-phases intervening between the events. For each strategy, various supervised machine 
+  learning models were evaluated with metrics adapted for imbalanced classification while placing weights on classes. 
+  Finally, a strategy was chosen and compared to the results from the reference method. 
+  The resulting neural network detects the four gait events allowing to segment strides in the signal as 
+  well as computing gait parameters for each gait cycle. Our method gives similar results as the reference one 
+  in terms of number of detected strides, their duration, or the percentage of stance phase in subject gaits.
+keywords: [Gait analysis, wearable sensors, event detection, gait segmentation, machine learning, supervised learning, classification, neural network, quaternions, imbalanced data]
 citation:
   type: article-journal
   container-title: "Computo"
@@ -31,7 +47,7 @@ citation:
 bibliography: references.bib
 github-user: computorg
 repo: "template-computo-r"
-draft: true # set to false once the build is running
+draft: false # set to false once the build is running
 published: false # will be set to true once accepted
 format:
   computo-html: default
