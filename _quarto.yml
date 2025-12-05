@@ -22,7 +22,7 @@ abstract: >+
   Analyzing human gait is essential for various health applications to improve life quality of patients suffering 
   from gait disorders such as monitoring the elderly. 
   Wearable sensors are increasingly replacing traditional methods (e.g., motion capture, pressure mats) 
-  because they are smaller, cheaper, and can return quantitative real-life data. 
+  because they are smaller, cheaper, and can return quantitative real-world data. 
   The aim of the method is to detect the specific events defining the human gait cycle that are the right and left 
   Heel Strike events and the right and left Toe Off events. These events allow in-depth gait analysis by deducing from
   them a number of spatio-temporal parameters giving crucial information on the patient's health.
@@ -36,7 +36,9 @@ abstract: >+
   The resulting neural network detects the four gait events allowing to segment strides in the signal as 
   well as computing gait parameters for each gait cycle. Our method gives similar results as the reference one 
   in terms of number of detected strides, their duration, or the percentage of stance phase in subject gaits.
-keywords: [Gait analysis, wearable sensors, event detection, gait segmentation, machine learning, supervised learning, classification, neural network, quaternions, imbalanced data]
+  This suggests that our event detection method used on wearable sensor data could replace the use of the reference 
+  tool to monitor patient gaits with a more objective measurement and in non-specialized settings.
+keywords: [Gait analysis, wearable sensors, event detection, gait segmentation, machine learning, supervised learning, classification, neural network, quaternions, imbalanced data.]
 citation:
   type: article-journal
   container-title: "Computo"
@@ -52,6 +54,8 @@ published: false # will be set to true once accepted
 format:
   computo-html: default
   computo-pdf:
+    toc: false
+    colorlinks: false
     cite-method: biblatex
     biblatexoptions: "sorting=none"
     header-includes:

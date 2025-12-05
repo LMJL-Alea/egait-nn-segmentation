@@ -1,56 +1,29 @@
+\newpage
+\tableofcontents
+\newpage
+
 # Introduction
 
-## Context
+## Gait analysis
 
-### Gait analysis
+Study of the human gait has been shown to be important in various health applications, such as study of general health in elderly populations. It has been shown that gait parameters including walking speed or gait variability are very good indicators of their general health, whether it is their physical health or their cognition [@beauchet2016poor; @annweiler2009risk]. 
 
-Study of the human gait has been shown to be important in various health applications, such as study of general health in elderly populations [@beauchet2016poor]. Wearable sensors are increasingly used for gait analysis as they are smaller, cheaper and more convenient than other methods such as motion capture systems or mats containing pressure sensors.
+To monitor gait, various methods such as motion capture systems or pressure mats are widely used due to their reliability but they require patients to travel to a health center owning a device. Furthermore, the measures are made in front of medical workers leading to an observational bias in the patient's performance. To address these issues, wearable sensors are increasingly used for gait analysis as they are smaller, cheaper and more convenient than more traditional methods as they can be used outside of medical structures.
 
-A walking cycle is defined as a stride, which is composed of two steps. More formally, a stride is the set of movements performed between two consecutive contacts of the heel of the same foot with the ground. The goal of our method is to detect different events happening during gait cycles when a subject is walking. This work can be used to segment the gait as cycles to extract strides and it allows further study of the gait such as spatio-temporal parameters analysis.
+Gait analysis is based on the cyclical phenomenon of walking as it can be decomposed as a number of strides, each composed of two steps. A stride is more formally called a gait cycle and is a precise biomechanical concept which is the elementary element of gait analysis. We define a gait cycle as the set of movements performed between two consecutive contacts of the heel of the same foot with the ground. The goal of our method is to detect key events happening during gait cycles both to segment the gait as strides and to further study the gait by computing spatio-temporal parameters based on the events.
 
-More precisely, the detected events are the moments where a foot touches or leaves the ground. They are called Heel-Strike and Toe-off respectively and they can be used to segment the stride in phases. The stance phase corresponds to the moments when the foot is in contact with the ground and can be found between the Right Heel-Strike and Left Toe-off events when a cycle starts with the right foot (see @fig-walking-cycle). This phase lasts generally 60% of the entire stride and is followed by the swing phase when the right foot is not anymore in contact with the ground.
-
-With these four markers identified during each cycle, the gait can be analysed with parameters such as stride length and stance phase percentage variability or symmetry between feet.
-
+More precisely, the key events are the moments where a foot touches or leaves the ground. They are called Heel Strike and Toe Off respectively and they can be used to segment the gait cycle in phases. The stance phase corresponds to the moments when the foot is in contact with the ground and can be found between the right Heel Strike and left Toe Off events when a cycle starts with the right foot. The stance phase lasts generally 60% of the entire stride and is followed by the swing phase when the right foot is not anymore in contact with the ground (see @fig-walking-cycle).
 
 ![Events and phases of a typical gait cycle. [^jacquelin-perry]](images/walking-cycles.png){#fig-walking-cycle width=400}
 
 [^jacquelin-perry]: Figure annotated from Jaquelin Perry's one on [Wikipedia](https://commons.wikimedia.org/wiki/File:GaitCycle_by_JaquelinPerry.jpg).
 
-
-### Unit quaternions
-
-Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages, as it is a rather compressed representation containing only four values and avoiding the gimbal lock problem presents in other representations. Unit quaternions were therefore chosen as the data type returned by the sensor.
-
-Quaternions are four-dimensional vectors denoted as $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank 4. Unit quaternions have a norm of 1 and can encode a 3D rotation with a rotation angle $\theta \in [0, 2\pi]$ and a rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
-
-$$
-\mathbf{q} = \text{cos}\left(\frac{\theta}{2}\right) + \left(u_x i + u_y j + u_z k \right) \text{sin}\left(\frac{\theta}{2}\right)
-$$ {#eq-quaternions}
-
-with :
-
-- $i$, $j$, and $k$ generalizing the imaginary number $i$, as $i^2=j^2=k^2=ijk=-1$.
-- $||\mathbf{q}|| = \sqrt{\mathbf{qq}^t} = 1$.
-
-The set of unit quaternions, denoted $\mathbb{H}_u$, possesses interesting properties. The quaternions $\mathbf{q}$ and $-\mathbf{q}$ represent the same rotation. The group is equipped with an identity element $\mathbf{q}^{(0)} = (1,0,0,0)$ which corresponds to the identity rotation, such that $\mathbf{q} \mathbf{q}^{(0)} = \mathbf{q}^{(0)}\mathbf{q} = \mathbf{q}$.
-
-It is possible to use the geodesic distance $d_g$ between two quaternions $\mathbf{q}_1$ and $\mathbf{q}_2$ to define a metric space $(\mathbb{H}_u, d_g)$, with:
-
-$$
-d_g (\mathbf{q}_1, \mathbf{q}_2) = ||\text{log}(\mathbf{q}_1^{-1} \mathbf{q}_2)||
-$$ {#eq-dist-geodesique}
-
-In this application, the sensor orientation is the rotation between the reference frame of origin, here the Earth's reference frame $R_f=(f_1, f_2, f_3)$ and its own reference frame $R_s=(s_1, s_2, s_3)$ formed by the accelerometer, gyroscope, and magnetometer (see @fig-sensor-axis).
-
-![Sensor reference and axis. [@drouin2023semi]](images/sensor-axis.png){#fig-sensor-axis width=200}
-
-Therefore, the IMU returns unit quaternion time-series allowing the study of the 3D hip rotation over time, as four-component vectors.
+In healthy gaits, a gait cycle usually lasts one second and the time difference between two events can be as little as 100 ms. The events require a precise detection for an accurate analysis of gait parameters.
 
 
 ## State of the art
 
-In the past, several methods for gait cycle segmentation have been studied based on signals recorded from wearable sensors placed on different parts of the body. We try in this part to give an overview of proposed methods by grouping them into categories, with variations related to the position of sensors on the body, the type of sensor measurement system used, and the characteristics of the signal.
+In the past, several methods for gait cycle segmentation and event detection have been studied based on signals recorded from wearable sensors placed on different parts of the body. We try in this part to give an overview of proposed methods by grouping them into categories, with variations related to the position of sensors on the body, the type of sensor measurement system used, and the characteristics of the signal.
 
 Search for feature points: Peak Detection and zero-crossing
 
@@ -58,7 +31,7 @@ Search for feature points: Peak Detection and zero-crossing
 
 Analysis of dynamic properties: Wavelet Transform
 
-: To detect gait events in recorded signals, another used method is wavelet transform because it allows detection of a specified frequency at a specified time. This method has been used to detect Heel-Strike and Toe-off events on an angular velocity signal by using multi-resolution wavelet decomposition [@aminian2002spatio]. The signal is decomposed into wavelet packages, using high-scale and low-scale filters. In @mccamley2012enhanced, the signal of the vertical acceleration is smoothed by integrating and then differentiating using a Gaussian Continuous Wavelet Transform (CTW). Events are found on minima and maxima of the differentiated signal. Furthermore, a method called Sparsity-assisted wavelet denoising (SWAD) has been developed to segment the signal in three events: mid-stance, toe-off and heel-strike [@prateek2019gait]. It uses a combination of linear time invariant filters, wavelets and sparsity based methods to extract a coefficient vector of Discrete Wavelet Transform (DTW). That generates a sparse template of moving segments of gyroscope measurements.
+: To detect gait events in recorded signals, another used method is wavelet transform because it allows detection of a specified frequency at a specified time. This method has been used to detect Heel Strike and Toe Off events on an angular velocity signal by using multi-resolution wavelet decomposition [@aminian2002spatio]. The signal is decomposed into wavelet packages, using high-scale and low-scale filters. In @mccamley2012enhanced, the signal of the vertical acceleration is smoothed by integrating and then differentiating using a Gaussian Continuous Wavelet Transform (CTW). Events are found on minima and maxima of the differentiated signal. Furthermore, a method called Sparsity-assisted wavelet denoising (SWAD) has been developed to segment the signal in three events: mid-stance, toe-off and heel-strike [@prateek2019gait]. It uses a combination of linear time invariant filters, wavelets and sparsity based methods to extract a coefficient vector of Discrete Wavelet Transform (DTW). That generates a sparse template of moving segments of gyroscope measurements.
 
 Pattern-matching: Dynamic Time Warping (DTW)
 
@@ -72,24 +45,61 @@ Other Machine Learning methods
 
 : Many studies on gait analysis use wearable sensors and machine learning. A study showed that most used methods for this purpose are SVM and CNN, and are largely used to detect diseases or recognize activities when analyzing gait data [@saboor2020latest]. SVM divides a set of objects into classes with widest possible margin at the hyperplane boundaries. Neural Networks use interconnected nodes organized in layers to process information and learn patterns through back-propagation and make predictions using activation functions.
 
-: Studies show good results when using machine learning to classify gait of patients having trouble walking, for instance patients with Parkinson Disease [@tahir2012parkinson;@wahid2015classification], or to extract gait parameters [@rampp2014inertial;@hannink2016sensor]. These studies mostly use Artificial Neural Networks but do not address the problem of the segmentation of the signal recorded by the sensors. Similarly, in @farah2019design, a logistic regression tree is used to classify gait phases in a stride but not to directly segment the signal into strides.
+: Studies show good results when using machine learning to classify gait of patients having trouble walking, for instance patients with Parkinson Disease [@tahir2012parkinson;@wahid2015classification], or to extract gait parameters [@rampp2014inertial;@hannink2016sensor]. These studies mostly use Artificial Neural Networks but do not address the problem of the segmentation of the signal recorded by the sensors. Similarly, in [@farah2019design], a logistic regression tree is used to classify gait phases in a stride but not to directly segment the signal into strides.
 
 : For the segmentation matter, Recurrent Neural Networks have shown good results for identifying Heel-Strike and Toe-off events with pressure sensors, accelerations and Euler angles [@prado2019gait]. Another study compared unsupervised machine learning (k-means) with supervised one (SVM and CNN), showing that CNNs were performing the best to predict stance and swing phases [@potluri2019machine]. Lastly, in another study, 24 time series from three sensors’ accelerometers and gyroscopes were used as input into a 6 layers CNN to estimate the likelihood of the corresponding input sample, given a specific gait event [@gadaleta2019deep]. For instance, the signal can be segmented with the initial contact of the right foot if this gait event is chosen in the model. This method was shown to perform better than a Wavelet Transform algorithm.
 
+We did not find in the literature a method based on hip rotations data represented as unit quaternion time-series which is the particularity of the data type used in our work. Furthermore, most methods presented either segment strides during a walking session or detect events inside already segmented strides. We propose here a method segmenting the gait cycles and detecting key gait events at the same time with a unique model.
+
+The paper is structured as follows. The second part focuses on the data type used in the study, describing data acquisition, the raw data properties and the creation of the feature space. The third part describes the strategies and methods used to implement models in order to take into account the data specificity as well as accurately tuning and evaluating models. The fourth part presents the results leading to the choice and evaluation of a final model. We complete our work with a discussion and conclusion on the study. All codes were developed in R [@Rlanguage] using the {tidymodels} [@tidymodels] framework.
 
 
 # Material
 
+This section details the data employed in this study. As unit quaternion time-series are used to represent rotations, we start by defining them and relying them to our problem.
+
+## Unit quaternions
+
+Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages, as it is a rather compressed representation containing only four values and avoiding the gimbal lock problem presents in other representations. Unit quaternions were therefore chosen as the data type returned by the sensor.
+
+Quaternions are four-dimensional vectors denoted as $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank 4. Unit quaternions have a norm of 1 and can encode a 3D rotation with a rotation angle $\theta \in [0, 2\pi]$ and a rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
+
+$$
+\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)
+= \text{cos}\left(\frac{\theta}{2}\right) + \left(u_x i + u_y j + u_z k \right) \text{sin}\left(\frac{\theta}{2}\right)
+$$ {#eq-quaternions}
+
+with :
+
+- $i$, $j$, and $k$ generalizing the imaginary number $i$, as $i^2=j^2=k^2=ijk=-1$.
+- $||\mathbf{q}|| = \sqrt{\mathbf{qq}^t} = 1$.
+
+The set of unit quaternions, denoted $\mathbb{H}_u$, possesses interesting properties. The quaternions $\mathbf{q}$ and $-\mathbf{q}$ represent the same rotation. The group is equipped with an identity element $\mathbf{q}^{(0)} = (1,0,0,0)$ which corresponds to the identity rotation, such that $\mathbf{q} \mathbf{q}^{(0)} = \mathbf{q}^{(0)}\mathbf{q} = \mathbf{q}$.
+
+It is possible to use the geodesic distance $d_g$ between two quaternions $\mathbf{q}_1$ and $\mathbf{q}_2$ to define a metric space $(\mathbb{H}_u, d_g)$, with:
+
+$$
+d_g (\mathbf{q}_1, \mathbf{q}_2) = ||\text{ln}(\mathbf{q}_1^{-1} \mathbf{q}_2)|| = \text{arccos}\left(2(\mathbf{q}_1 . \mathbf{q}_2)^2 -1\right)
+$$ {#eq-dist-geodesique}
+
+with the log-quaternion defined as $\text{ln}(\mathbf{q}) =  \text{ln}\left(\text{exp}\left({\mathbf{u}\dfrac{\theta}{2}}\right)\right)$.
+
+In this application, the sensor orientation is the rotation between the reference frame of origin, here the Earth's reference frame $R_f=(f_1, f_2, f_3)$ and its own reference frame $R_s=(s_1, s_2, s_3)$ formed by the accelerometer, gyroscope, and magnetometer (see @fig-sensor-axis).
+
+![Sensor reference and axis. [@drouin2023semi]](images/sensor-axis.png){#fig-sensor-axis width=200}
+
+A quaternion time-serie is a set of unit quaternions following a temporal grid $t_1, \dots, t_p$, noted as $\mathbf{Q}_i = (\mathbf{q}_{1i}, \dots, \mathbf{q}_{pi})$. It represents the consecutive 3D hip rotation over time, as four-component vectors.
+
+
 ## Data acquisition
 
-A wearable sensor was used to record the hip rotation. It contains an accelerometer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is 100Hz. With this device, the data acquired is in the form of unit quaternion time-series, representing the 3D rotation of the hip over time.
+A wearable sensor was used to record the hip rotation. It contains an accelerometer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is 100 Hz so data is acquired every 10 ms. With this device, the data acquired is in the form of unit quaternion time-series as presented previously.
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
+During acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the wearable sensor on their right hip. It implies that subjects were walking approximately nine meters on a straight line. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times are used to know when the gait events actually happened. This data is then used label the quaternion time-series to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
 
-During acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the wearable sensor on their right hip. It implies that subjects were walking approximately nine meters on a straight line. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times can be used to know when the gait events actually happened. This data is then used to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
-
-Six subjects have been included in this study (three men and three women) walking at different speeds to have a variety of gait data (see @tbl-subjects). We have in total 174 walking sessions.
+Six subjects have been included in this study (three men and three women) walking at different speeds to have a variety of gait data (see @tbl-subjects). We have in total 174 walking sessions acquired between June and September 2024.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
@@ -130,27 +140,26 @@ Summary of subjects and walking speeds used to train the model.
 
 :::
 
-
 ## Data presentation
 
 Sensor data
 
-: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie). It is important to note that on this figure, the walking cycles are clearly apparent and consistent over time, as it represents a healthy gait. This is not the case for subjects having gait disorders, which is one of the reason we develop a method more complex than peak detection. Our method also allows prediction of different events during a walking cycle which would not be allowed by only segmenting the signal into cycles.
+: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie) at each recorder time. The four coordinates comes from the definition of quaternions as defined in @eq-quaternions. It is important to note that on this figure, the gait cycles are clearly apparent and consistent over time, as it represents a healthy gait, which would not necessarily be the case for subjects having gait disorders.
 
-![Data returned by the wearable sensor.](images/time-serie.png){#fig-timeserie width=350}
+![Data returned by the wearable sensor as a four-coordinate unit quaternion time-serie.](images/time-serie.png){#fig-timeserie width=350}
 
 Sensor data preprocessing 
 
-: A centring step is applied on the quaternion time-series to center them around a mean. Supposing we have $n$ time-series $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ on the same time grid $t_1, \dots, t_p$, we can write $\mathbf{Q}_i(t_k) = \mathbf{q}_{ik} \in \mathbb{H}_u$, with $i \in [\![ 1, n ]\!]$ et $k \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-dist-geodesique) to compute the mean of each quaternion $\mathbf{q}_{1k}, \dots, \mathbf{q}_{nk}$ for each time $t_k$. 
+: A centring step is applied on the quaternion time-series to center them around a mean. Supposing we have $n$ time-series $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ on the same time grid $t_1, \dots, t_p$, we can write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, with $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-dist-geodesique) to compute the mean of each quaternion $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ for each time $t_j$. 
 
 : $$
-\mathbf{q}_k^{(m)} = \mathbf{Q}^{(m)} (t_k) = \underset{q \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ik}, \mathbf{q}), \hspace{5mm} k \in [\![ 1, p ]\!]
+\mathbf{q}_j^{(m)} = \mathbf{Q}^{(m)} (t_j) = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!]
 $$ {#eq-mean-qts}
 
 : The centered time-series $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed.
 
 : $$
-\mathbf{q}_{ik}^{(c)} = \mathbf{Q}_i^{(c)} (t_k) = \left( \mathbf{q}_k^{(m)} \right)^{-1} \mathbf{q}_{ik}, \hspace{5mm} k \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!]
+\mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!]
 $$ {#eq-centring-qts}
 
 : The other pre-processing step is to switch to a functional representation using cubic splines to be able to compute derivatives [@ramsay2005].
@@ -158,12 +167,12 @@ $$ {#eq-centring-qts}
 
 Pressure mat data
 
-: The GAITRite© mat returns directly spatio-temporal parameters such as stride duration, stride length or speed. Since the two devices were triggered simultaneously, the same time range is used to associate each gait event with a time on the sensor time-series. More precisely, each time of the time-series will be classified between a number of classes. This method rises a class imbalance challenge that will be addressed later in the article.
+: The GAITRite© mat measures the feet position on the mat with its sensors while the subject walks on it. It returns directly spatio-temporal parameters such as stride duration, stride length or walking speed (see @tbl-gaitrite-params in the Appendix for a list of all parameters). It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the same time range is used to associate each time on the IMU time-series with a gait event recorder by the mat. We use the pressure mat as a gold standard to label the observations between the different classes and train the model on this labeled data.
 
 
 ## Feature space
 
-To implement a machine learning model, we build a feature space containing variables characterizing the hip rotation over time.
+The feature space is defined by a set of variables that captures the time-varying characteristics of hip rotation. It forms the data used to build machine learning models that will learn its pattern to detect the events associated to each time.
 
 Angular velocity and acceleration
 
@@ -197,78 +206,73 @@ $$
 \end{bmatrix}
 $$ {#eq-rpy}
 
+with $\text{atan2}(y, x)$ returning the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane.
+
 
 Walking speed
 
 : One of our hypothesis is that the gait can differ depending if the subject walks slowly of faster. Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.
 
-The feature space depends on two hyper-parameters. The first one is a smoothness parameter *spar* for the time-serie curves, as derivation is used to compute some variables. It is contained in $]0,1]$ and is used to fit a cubic smoothing spline to the time-serie. The second one is the *lag* parameter, to keep at the time $t_p$ the information from the time $t_{p-1}, \dots, t_{p-lag}$. That parameter implies that the feature space contains $10 + 9 \times lag$ variables.
+Feature Space Hyper-parameters
+
+: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* for the time-serie curves. Since derivation is used to compute some predictors, it is useful to smooth the curves so the values are stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$ and is used to fit a cubic smoothing spline to the data. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a certain time, we add on the observation $t_j$ the predictor values from the times $t_{j-1}, \dots, t_{j-lag}$. The feature space length depends on the *spar* parameter as it contains $10 + 9 \times lag$ variables. Finally, a last hyper-parameter is used when we label the observations with the event times from the gold standard. It is called *k* and controls the number of points that we label as part of the event. Since it is not used in both compared strategies, it is explained in the next section while we describe the two strategies.
+
 
 # Methods
 
 ## Classification strategies
 
-To segment the gait, we compare two strategies to classify the observations.
+Gait event detection is performed by evaluating and comparing two strategies to classify the observations.
 
-Method 1: Predicting gait events
+Strategy 1: Predicting gait events
 
-: The first method is to directly predict the gait events happening during the walk. We classify the observations in five classes for each event and other times :
+: The first strategy is to directly predict the gait events happening during the walk. We classify the observations in five classes depending if the time corresponds to an event or not:
 
-: - Right Heel Strike
-- Left Toe Off
-- Left Heel Strike
-- Right Toe Off
-- None (all other times not corresponding to a certain event)
+: - *Right Heel Strike*
+- *Left Toe Off*
+- *Left Heel Strike*
+- *Right Toe Off*
+- *None* (all other times not corresponding to a certain event)
 
-: This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the negative class widely over-represented. Indeed, the class we call *None* that represents times that do not belong to an event is clearly larger than the four other ones.
+: This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones. It is clearly represented on the @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the time-serie recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
 
-![Example of events represented on a unit quaternion time serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event_timeserie width=350}
+: ![Time of events represented on a unit quaternion time serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350 fig-pos="H"}
 
-When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, by labeling as part of an event three points rather than just one, the event happens in a window of 30 ms. This strategy also reduces somewhat the imbalance between the class proportions.
+: When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time given by the gold standard. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, if we have $k=1$, we label 3 observations as part of the event rather than just one. In this case we consider that the event happens in a window of 20 ms instead of just at a precise time. This strategy also reduces somewhat the imbalance between the class proportions.
 
-Method 2: Predicting sub-phases
+Strategy 2: Predicting sub-phases
 
-: The second method consists of predicting sub-phases in the signal that are characterized with the gait events. We label each part in the signal between two events as a sub-phase, leading to four classes for our observations:
+: The second approach consists of predicting sub-phases in the signal that are characterized by the gait events. We label each part in the signal between two events as a sub-phase, leading to four classes for our observations:
 
-: - Pre-Stance phase: between Right Heel Strike and Left Toe Off
-- Stance phase: between Left Toe Off and Left Heel Strike
-- Pre-Swing phase: between Left Heel Strike and Right Toe Off
-- Swing phase: between Right Toe Off and Right Heel Strike
+: - *Pre-Stance* phase: between *Right Heel Strike* and *Left Toe Off*
+- *Stance* phase: between *Left Toe Off* and *Left Heel Strike*
+- *Pre-Swing* phase: between *Left Heel Strike* and *Right Toe Off*
+- *Swing* phase: between *Right Toe Off* and *Right Heel Strike*
 
-: To name these classes, we base ourselves on a typical cycle starting with the right foot, starting with a stance phase while the right foot is on the ground followed by a swing phase. This classification allows us to have four classes that are less imbalanced without a negative class. The disadvantage is that after the model predictions we need to find the events from the predicted phases.
+: To name these classes, we based ourselves on a typical cycle starting with the right foot, starting with a stance phase while the right foot is on the ground followed by a swing phase. This classification allows us to have four classes that are less imbalanced, without a class that does not contain events like the *None* class in the first strategy. The downside is that we loose some precision as for the event times and that we need to find the events from the predicted phases after the model predictions.
 
-![Example of phases represented on a unit quaternion time serie.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases_timeserie width=350}
+: ![Example of phases represented on a unit quaternion time serie.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases-timeserie width=350 fig-pos="H"}
+
+: We represent the sub-phases on the IMU time-serie in the @fig-phases-timeserie where each sub-phase is represented by a different color. It shows that some sub-phases are larger than others as it is clear on this example that the sub-phases *Pre-Stance* and *Pre-Swing* are shorter than the *Stance* and *Swing* ones.
 
 
 ## Supervised classification models
 
-Multinomial Regression [@hosmer2013applied; @hastie2015statistical]
+Now that we defined our feature space predictors and the different classes used to classify the data, we can build supervised classification models with them. We define in this part the machine learning models that we compare for both strategies.
 
-: A multinomial regression is built by fitting a set of independent binary logistic regressions. Let $N$ be the number of observations and $X = (X_1, \dots, X_p)$ the predictors. We want to classify our observations in $K$ classes. We choose one category to be the baseline, we name it $k_0$. We build $K-1$ logit equations modeling the log-odds of a class $k$ versus the class $k_0$. The logit equation for a class $k$ is:
+Multinomial Regression [@hosmer2013applied]
+
+: A multinomial regression is built by fitting a set of independent binary logistic regressions. We want to classify our observations in $K$ classes. We choose one category to be the baseline and name it $k_0$. We build $K-1$ logit equations modeling the log-odds of a class $k$ versus the class $k_0$. The logit equation for a class $k$ is:
 
 : $$
 log\left( \frac{\mathbb{P}(Y = k | X)}{\mathbb{P}(Y = k_0 | X)} \right) = \beta_{0k} + \beta_k^TX
 $${#eq-logit}
 
-: with $Y$ the class of the observation, $\beta_{0k}$ the intercept and $\beta_{1k}, \dots, \beta_{pk}$ the regression coefficients.
+: with $Y$ the class of the observation, $X$ the predictors, $\beta_{0k}$ the intercept and $\beta_{1k}, \dots, \beta_{pk}$ the regression coefficients.
 
-: The softmax function is then used to convert the $K-1$ logit scores into probabilities for each class:
+: The softmax function is then used to convert the $K-1$ logit scores into probabilities for each class. Finally, the observation is classified in the class with the highest probability. To fit the model, ie to find the best values for the coefficients, we maximize the log likelihood function.
 
-: $$
-\mathbb{P}(Y = k_0 | X) = \frac{1}{1 + \sum_{j=1}^{K-1} e^{\beta_{0k} + \beta_k^TX }}
-\hspace{5mm} \text{and} \hspace{5mm}
-\mathbb{P}(Y = k | X) = \frac{e^{\beta_{0k} + \beta_k^TX }}{1 + \sum_{j=1}^{K-1} e^{\beta_{0k} + \beta_k^TX }}
-$${#eq-softmax}
-
-: Finally, the observation is classified in the class with the highest probability. To fit the model, ie to find the best values for the coefficients, we maximize the log likelihood function defined as:
-
-: $$
-l(\beta) = \sum_{i=1}^N log(\mathbb{P}(Y = y_i |x_i, \beta))
-$${#eq-loglikelihood}
-
-: Since the log-likelihood measures the probability of observing that exact data assuming a particular set of model parameters, maximizing this function allows us to find the best set of parameters.
-
-: When we have a large set of variables, we can regularized the estimation by introducing penalty terms in the log-likelihood function. The two main types of penalization are the L1 regularization (also called a Lasso model) and the L2 regularization (also called a Ridge model). The Ridge regression prevents overfitting by adding the term $\lambda \sum_{k=1}^K \beta_k^2$ to the loss function, while the Lasso model selects features by adding the term $\lambda \sum_{k=1}^K |\beta_k|$ to the loss, giving a sparse solution with only some non-zero coordinates. The parameter $\lambda$ is called the regularization parameter.
+: When we have a large set of variables, we can regularized the estimation by introducing penalty terms in the log-likelihood function [@hastie2015statistical]. The two main types of penalization are the L1 regularization (also called a Lasso model) and the L2 regularization (also called a Ridge model). The Ridge regression prevents overfitting by adding the term $\lambda \sum_{k=1}^K \beta_k^2$ to the loss function, while the Lasso model selects features by adding the term $\lambda \sum_{k=1}^K |\beta_k|$ to the loss, giving a sparse solution with only some non-zero coordinates. The parameter $\lambda$ is called the regularization parameter.
 
 
 Decision tree [@kuhn2013applied; @breiman2017classification]
@@ -311,7 +315,7 @@ This distance is a generalization of multiple well-know distances as we find the
 
 Neural networks [@varma2018]
 
-: Neural Networks are deep learning models inspired by the human brain. They consist of interconnected nodes organized in layers which process the data by passing it from one layer to the next. The input data is transformed with non-linear functions, allowing the model to return a classification for each observation as output. The model contains two essential parameters: weights on each connection and biases on each node. It learns data pattern by adjusting these parameters during forward and backward propagation for each observation to minimize a loss that represents the difference between real and predicted values. Most often, the loss used is the cross-entropy which is defined as followed for the observation $m$:
+: Neural Networks are deep learning models inspired by the human brain. They consist of interconnected nodes organized in layers which process the data by passing it from one layer to the next. The model contains two essential parameters: weights on each connection and biases on each node. The input data is given to the input layer and then passes through the hidden layers. At each layer, a pre-activation is computed with the weights and biases and is transformed as an activation with non-linear functions (usually the function *ReLU*). Finally, the result goes into the output layer which uses an output function (the *softmax* function for more than two classes) to return the predicted class for each observation. It learns data pattern by adjusting the parameters during forward and backward propagation for each observation to minimize a loss that represents the difference between real and predicted values. Most often, the loss used is the cross-entropy which is defined as followed for the observation $m$:
 
 : $$
 \square(m) = - \sum_{k=1}^K t_k(m) \text{log}(y_k(m))
@@ -349,29 +353,23 @@ This formula gives balanced weights but we can also choose class weights manuall
 
 ## Performance metrics
 
-In classification problems, the most widely used metric is accuracy which is defined as the number of correct predictions divided by the total number of predictions. In our second strategy where we predict phases, we have four classes that are not severely unbalanced and without a negative class, thus we can simply use accuracy to tune and evaluate our models.
+To tune and evaluate the models, we need to use metrics adapted to the data. Here, depending on the strategy used, we can't use the same metrics as the labeled classes are very different.
 
-In the case of severe imbalanced classes like in our first strategy where we directly predict events, we cannot use accuracy to correctly evaluate the model. Indeed, since the model will predict almost only the majority class which is the negative one, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
+First of all, for the second strategy predicting sub-phases, we have four classes that are not severely unbalanced and all having the same importance. In this case, we can simply use the accuracy metric to tune and evaluate our models. It is the most widely used metric in machine learning and is defined as the number of correct predictions divided by the total number of predictions
+
+For the first strategy where we directly predict events, we are in a case of severe class imbalance so we can't use accuracy to correctly evaluate the model. Indeed, since the model will predict almost only the majority class which is the negative one, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
 
 We need to use other metrics that are adapted to this situation. An important tool is the confusion matrix which indicate the number of predictions in each class compared to the real classes of the observations.
 
-In a binary classification, The matrix contains the values of the True Positives ($TP$), False Positives ($FP$), True Negatives ($TN$) and False Negatives ($FN$). Two of the metrics that can be calculated from this matrix are known as Sensitivity and Specificity. They are defined as follow:
-
-$$
-\text{Sensitivity} = \frac{TP}{TP+FN} 
-$${#eq-sensitivity}
-
-$$
-\text{Specificity} = \frac{TN}{TN+FP}
-$${#eq-specificity}
-
-The Sensitivity measures how well the model has found all occurrences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
+In a binary classification, The matrix contains the values of the True Positives ($TP$), False Positives ($FP$), True Negatives ($TN$) and False Negatives ($FN$). Two of the metrics that can be calculated from this matrix are known as Sensitivity and Specificity. The Sensitivity measures how well the model has found all occurrences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
 
 In a multiclass classification, we can extend these metrics to use them with a different number of positive classes. In our case, we have four classes containing less observations and having to be correctly predicted, while the other class is the majority class. 
 
-![Confusion matrix for five classes inclusing one negative one.](images/confusion-matrix.png){#fig-confusion-matrix width=300}
+We define a confusion matrix with multiple positive classes and one negative class (see @fig-confusion-matrix). The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,.}$ represents the number of observations from the class $i$, while $c_{.,j}$ represents the number of observations that the model predicted to be in the class $j$.
 
-We define a confusion matrix with multiple positive classes and one negative class (see @fig-confusion-matrix). The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,.}$ represents the number of observations from the class $i$, while $c_{.,j}$ represents the number of observations that the model predicted to be in the class $j$. We now define the extension of Sensibility and Specificity with these notations, that can be called Macro-Average Sensibility and Macro-Average Specificity [@mortaz2020]. The formulas are generalized for a total of $K$ classes containing one negative class.
+![Confusion matrix for five classes including the *None* one represented by the letter N and four classes of interest named P1 to P4.](images/confusion-matrix.png){#fig-confusion-matrix width=300}
+
+We now define our extensions of Sensibility and Specificity with these notations, that can be called Macro-Average Sensibility and Macro-Average Specificity [@mortaz2020]. The formulas are generalized for a total of $K$ classes including one class not containing any relevant information, in our case the *None* class.
 
 $$
 \text{MA Sensitivity} = \frac{1}{K-1} \sum_{i=1}^{K-1} \frac{c_{i,i}}{c_{i,.}}
@@ -383,18 +381,20 @@ $${#eq-maspecificity}
 
 These metrics can be used to evaluate our model to know if the classes of interest are correctly predicted.
 
-To tune a model, we need a metric that combines the information from the previously defined MA Sensitivity and MA Specificity. The weighted Youden index [@li2013weighted] has this function, allowing the user to put a different weight on each metric. We generalize this index with the Macro-Average versions of the metrics:
+To tune a model, we need a metric that combines the information from the previously defined MA Sensitivity and MA Specificity. The weighted Youden index [@li2013weighted] has this function, allowing the user to put a different weight on the Sensitivity and the Specificity. We generalize the weighted Youden index with the Macro-Average versions of the metrics:
 
 $$
-J_w = 2(w \times \text{MA Sensitivity} + (1-w) \times \text{MA Specificity}) -1
+\text{Weighted Youden Index} = 2(w \times \text{MA Sensitivity} + (1-w) \times \text{MA Specificity}) -1
 $${#eq-youden}
 
 with $w \in [0,1]$ representing the weight put on the MA Sensitivity.
 
-In our case, we chose to put a weight of $0.7$ on the MA Sensitivity to make sure not to forget observations in the minority classes.
+The weight parameter controls the importance of each metric. The greater it is, the more weight we put on the MA Sensitivity. In our case, we chose to put a weight of $0.7$ on the MA Sensitivity because we wanted to make sure not to forget observations in the minority classes, even if it meant predicting too many of these observations.
 
 
 ## Data splitting and Tuning strategy
+
+=> TODO: new figure and better explanations
 
 To correctly tune and evaluate the model, data is initially split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to be able to evaluate the model on data never seen before. We chose to keep entire walking sessions in each set so that the model would never see any observation of the sessions contained in the test set during training. We had 139 sessions in the training set and 35 sessions in the test set.
 
@@ -406,25 +406,32 @@ For tuning, the training set is used to create five folds which are random parti
 
 To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the weighted Youden index for the event prediction.
 
+Now that we defined all methods and tools necessary to build machine learning models on our data, we can present our results.
 
 # Results
 
+Various models are built and evaluated to find the best model for each strategy. Then, both strategies are compared to select the best one and have a resulting final model.
+
 ## Tuning of hyper-parameters
 
-In order to choose the best model for each strategy, we tuned the hyper-parameter of each model for both strategies. Since we do not use the same metric to tune and evaluate models if we detect events or sub-phases, we cannot directly choose a strategy at this step. Therefore, we select one model per strategy and compare the two strategies later.
+In order to choose the best model for each strategy, we tuned the hyper-parameter of each model for both strategies. Since we do not use the same metric to tune and evaluate models for each strategy, as we use a weighted Youden index in the first strategy to detect events and accuracy in the second strategy to detect sub-phases, we cannot directly choose a strategy at this step. Therefore, we select one model per strategy and compare the two strategies later.
 
-Here are the tuning grid values used for the feature space parameter (@tbl-grid-fs), the class weights (@tbl-grid-class-weights) and the model hyper-parameters (@tbl-grid-model).
+We choose a set of values to test for each hyper-parameter of the feature space tuning (see @tbl-grid-fs). We recall that the hyper-parameters *spar* and *n_lag* are used in both strategies but the hyper-parameter *k* is used only in the first strategy to label events.
 
 ::: {#tbl-grid-fs tbl-pos="H"}
 
 ```{r}
 tibble::tibble(
   param = c("spar", "n_lag", "k"),
+  description = c("Smoothing curve parameter", "Kept times in the past", "Number of labeled points"),
+  strategy = c("Both", "Both", "Strategy 1"),
   values = c("0.3, 0.4, 0.5, 0.6, 0.7", "1, 2, 3, 4, 5", "1, 2, 3")
 ) |>
   gt::gt() |> 
   gt::cols_label(
     param = "Parameter",
+    strategy = "Strategy",
+    description = "Description",
     values = "Tuning Grid"
   ) |> 
   gt::cols_align(
@@ -442,6 +449,8 @@ Feature space parameters tuning grid values.
 
 :::
 
+For the first strategy, we also tune the weight classes used to address the class imbalance issue. For this matter, we fix the weight of the class *None* with the value 1, and we test different weights for the classes of interest (see @tbl-grid-class-weights). For the second strategy, as the class imbalance is less present, we only use the weights from the inverse class frequency method defined in @eq-inv-class-frequency.
+
 ::: {#tbl-grid-class-weights tbl-pos="H"}
 
 ```{r}
@@ -451,37 +460,21 @@ is_empty <- function(x) {
 
 options(gt.html_tag_check = FALSE)
 tibble::tibble(
-  strat = c("Event Detection", "Event Detection",  "Phase Detection"),
-  param = c("Weight on negative class", "Weight on positive classes", "Weights on classes"),
-  values = c("1", "40, 60, 80", "Inv. class freq.: c(1.89, 0.67, 1.90, 0.69)")
-) |> 
-  dplyr::group_by(strat) |> 
-  dplyr::mutate(strat = ifelse(dplyr::row_number() == 1, strat, "")) |> 
-  dplyr::ungroup() |> 
-  gt::gt() |> 
-  gt::tab_style(
-    style = list(
-      gt::cell_borders(
-        sides = c("top", "bottom"),
-        weight = gt::px(0)
-      )),
-    locations = list(
-      gt::cells_body(
-        columns = strat,
-        rows = is_empty(strat)
-      )
-    )
-  ) |> gt::cols_label(
-    strat = "Strategy",
+  param = c("Weight on class *None*", "Weight on event classes"),
+  values = c("1", "40, 60, 80")
+) |> gt::gt() |> 
+  gt::cols_label(
     param = "Parameter",
     values = "Tuning Grid"
-  ) |> gt::tab_options(column_labels.background.color = "#616161")
+  ) |> gt::tab_options(column_labels.background.color = "#616161") |> 
+  gt::fmt_markdown(columns = param)
 ```
 
-Class weight tuning grid values.
+Strategy 1 (Event Detection): Class weight tuning grid values.
 
 :::
 
+Finally, we build tuning grid values for every model hyper-parameters which are common to both strategies (see @tbl-grid-model).
 
 ::: {#tbl-grid-model tbl-pos="H"}
 
@@ -503,6 +496,15 @@ param = c(
   "`trees`", "`min_n`", "`tree_depth`", "`learn_rate`",
   "`neighbors`", "`dist_power`",
   "`hidden_units`", "`learn_rate`", "`dropout`"
+),
+description = c(
+  "Regularization parameter", "Regularization type (Lasso, Ridge, Elastic Net)",
+  "Tree depth", "Minimal number of observations before splitting",
+  "Tree depth", "Minimal number of observations before splitting",
+  "Number of trees", "Minimal number of observations before splitting",
+  "Number of trees", "Minimal number of observations before splitting", "Tree depth", "Learning rate",
+  "Number of nearest neighbors", "Minkowski distance order",
+  "Hidden layers and units", "Learning rate", "Rate of randomly deactivated nodes"
 ),
 values = c(
   "0.01, 0.001, 0.0001", "0, 0.25, 0.5, 0.75, 1",
@@ -532,8 +534,16 @@ values = c(
   ) |> gt::cols_label(
     model = "Model",
     param = "Parameter",
+    description = "Description",
     values = "Tuning Grid"
-  ) |> gt::tab_options(column_labels.background.color = "#616161") |> 
+  ) |> 
+  gt::cols_width(
+    model ~ "25%",
+    param ~ "17%", 
+    description ~ "38%",
+    values ~ "25%"
+  ) |>  
+  gt::tab_options(column_labels.background.color = "#616161") |> 
   gt::fmt_markdown(columns = param)
 ```
 
@@ -541,7 +551,7 @@ Model hyper-parameter tuning grid values.
 
 :::
 
-For each strategy and each model, we get the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the appendix for the detail of chosen parameters for each model). We then evaluate each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
+For each strategy and each model, we get the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the Appendix for the detail of chosen parameters for each model). We then evaluate each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
 
 ::: {#tbl-res tbl-pos="H"}
 
@@ -554,8 +564,8 @@ data.frame(
   gt::gt() |> 
   gt::cols_label(
     model = "Model",
-    youden = "Event detection: weighted Youden index",
-    accuracy = "Phase detection: accuracy"
+    youden = "Strategy 1 (Event detection): weighted Youden index",
+    accuracy = "Strategy 2 (Phase detection): accuracy"
   ) |> 
   gt::tab_options(column_labels.background.color = "#616161") |> 
   gt::tab_style(
@@ -570,7 +580,7 @@ data.frame(
   )
 ```
 
-Score on the test set for both strategies.
+Performance metrics on the test set for both strategies.
 
 :::
 
@@ -610,7 +620,7 @@ The first point of comparison is the number of each event detected during the wa
 
 When we detect sub-phases, the "Heel-Strike" events seem to be well estimated but it not the case for the "Toe-Off" events that are predicted too late, about 150ms after the real time of the event. This could mean that for these events, it would give better results to take one of the first points of the detected sub-phase instead of the point with the model highest probability. Since we do not have theoretical explanation of this phenomena, we can not justify the use of different procedure for either "Heel Strike" or "Toe-Off" events. On the other hand, when we detect the events directly, all of the event times are estimated near the real ones with no distinction between classes. For each type of event, the estimated time median is at approximately 50ms before the real event, with a few outliers. Overall, the results given by the event detection are closer to the times given by the gold standard so we retain this strategy. 
 
-## Performances on the test set
+## Detailed performance of the selected model
 
 The final selected model is the neural network from the first strategy predicting directly the event times. We evaluate this model on the test set for our three metrics (see @tbl-final-eval) and we perform a more in-depth comparison of the estimated events with the real ones given by the gold standard.
 
@@ -631,7 +641,7 @@ tibble::tibble(
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
-Metrics of the selected model on the test set.
+Performance metrics of the selected model on the test set.
 
 :::
 
@@ -641,12 +651,12 @@ For a complete comparison of our model with the gold standard, we use spatio-tem
 
 ![Comparison of the mean cycle duration (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
 
-![Comparison of the mean stance percentage.](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
+![Comparison of the mean stance percentage (%).](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
 
 Bland-Altman plots to compare our model with the gold standard on spatio-temporal parameters.
 :::
 
-For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between -26ms and 21ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between -8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between -26 ms and 21 ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between -8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
 
 
 # Discussion and conclusions
@@ -666,6 +676,51 @@ To improve our model so it better generalizes on various subjects especially wit
 
 
 # Appendix {.unnumbered}
+
+::: {#tbl-gaitrite-params tbl-pos="H"}
+
+```{r}
+#| layout="[45, -10, 45]"
+
+tibble::tibble(
+  param = c("Total distance (cm)",
+            "Total duration (s)",
+            "Speed (cm/s)",
+            "Normalized speed",
+            "Number of steps",
+            "Walking pace (step/m)",
+            "Difference of step duration (s)",
+            "Difference of step length (cm)",
+            "Difference of cycle duration (s)"
+            ),
+) |> gt::gt() |> 
+  gt::cols_label(
+    param = "Global Parameters",
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
+
+tibble::tibble(
+  param = c("Step duration (s)",
+            "Cycle duration (s)",
+            "Step length (cm)",
+            "Cycle length (cm)",
+            "Step width (cm)",
+            "Simple support phase (%)",
+            "Double support phase (%)",
+            "Stance phase (%)",
+            "Swing phase (%)",
+            "Normalized step",
+            "Foot rotation (°)"
+            ),
+) |> gt::gt() |> 
+  gt::cols_label(
+    param = "Bilateral Parameters",
+  ) |> gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Spatio-temporal parameters returned by the GAITRite© pressure mat.
+
+:::
+
 
 ::: {#tbl-tuning-res-events tbl-pos="H"}
 
