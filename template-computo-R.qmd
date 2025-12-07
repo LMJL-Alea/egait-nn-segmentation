@@ -51,12 +51,12 @@ Other Machine Learning methods
 
 We did not find in the literature a method based on hip rotations data represented as unit quaternion time-series which is the particularity of the data type used in our work. Furthermore, most methods presented either segment strides during a walking session or detect events inside already segmented strides. We propose here a method segmenting the gait cycles and detecting key gait events at the same time with a unique model.
 
-The paper is structured as follows. The second part focuses on the data type used in the study, describing data acquisition, the raw data properties and the creation of the feature space. The third part describes the strategies and methods used to implement models in order to take into account the data specificity as well as accurately tuning and evaluating models. The fourth part presents the results leading to the choice and evaluation of a final model. We complete our work with a discussion and conclusion on the study. All codes were developed in R [@Rlanguage] using the {tidymodels} [@tidymodels] framework.
+The paper is structured as follows. The second section focuses on the data type used in the study, describing data acquisition, the raw data properties and the creation of the feature space. The third section describes the strategies and methods used to implement models in order to take into account the data specificity as well as accurately tuning and evaluating models. The fourth section presents the results leading to the choice and evaluation of a final model. We complete our work with a discussion and conclusion on the study. All codes were developed in R [@Rlanguage] using the {tidymodels} framework [@tidymodels].
 
 
 # Material
 
-This section details the data employed in this study. As unit quaternion time-series are used to represent rotations, we start by defining them and relying them to our problem.
+This section details the data employed in this study. As unit quaternion time-series are used to represent rotations, we start by defining them and linking them to our goal.
 
 ## Unit quaternions
 
@@ -236,9 +236,11 @@ Strategy E: Predicting gait Events
 
 : This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones. It is clearly represented on the @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the time-serie recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
 
-: ![Time of events represented on a unit quaternion time-serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350 fig-pos="H"}
+: ![Time of events represented on a unit quaternion time-serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350}
 
 : When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time given by the gold standard. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, if we have $k=1$, we label 3 observations as part of the event rather than just one. In this case we consider that the event happens in a window of 20 ms instead of just at a precise time. This strategy also reduces somewhat the imbalance between the class proportions.
+
+\newpage
 
 Strategy P: Predicting sub-Phases
 
@@ -277,9 +279,10 @@ $${#eq-logit}
 
 Decision tree [@kuhn2013applied; @breiman2017classification]
 
-: Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes. 
+: Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. 
+<!-- We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes.  -->
 
-: ![Basic decision tree.](images/example_tree.png){#fig-decisiontree width=250}
+<!-- : ![Basic decision tree.](images/example_tree.png){#fig-decisiontree width=250} -->
 
 : The goal is to classify the observations into smaller and more homogeneous groups, forming rectangular areas within data points. Homogeneity is defined here as how pure the splitting nodes are , meaning that there is a higher proportion of one class in each node. We can use the Gini index to compute purity. In a scenario with $K$ classes, each having probability $p_1, \dots, p_K$, the Gini impurity for a certain node is defined as:
 
@@ -302,7 +305,7 @@ $k$-Nearest Neighbors [@cover1967nearest]
 
 : A $k$-Nearest Neighbors model finds the $k$ closest data points to a given input and makes prediction based on the majority class within its neighbors. This model is non-parametric as it does not make assumption about the underlying data.
 
-: ![A point classified in the majority class within its $k = 3$ neighbors.](images/example_3nn.png){#fig-knn width=300}
+<!-- : ![A point classified in the majority class within its $k = 3$ neighbors.](images/example_3nn.png){#fig-knn width=300} -->
 
 To calculate the distance between the input and its neighbors, the Minkowski distance can be used. It is defined as:
 
@@ -369,8 +372,6 @@ We define a confusion matrix with multiple positive classes and one negative cla
 
 ![Confusion matrix for five classes including the *None* one represented by the letter N and four classes of interest named P1 to P4.](images/confusion-matrix.png){#fig-confusion-matrix width=300 pos="H"}
 
-\newpage 
-
 We now define our extensions of Sensibility and Specificity with these notations, that can be called Macro-Average Sensibility and Macro-Average Specificity [@mortaz2020]. The formulas are generalized for a total of $K$ classes including one class not containing any relevant information, in our case the *None* class.
 
 $$
@@ -396,15 +397,13 @@ The weight parameter controls the importance of each metric. The greater it is, 
 
 ## Data splitting and Tuning strategy
 
-=> TODO: new figure and better explanations
-
 To correctly tune and evaluate the model, data is initially split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to be able to evaluate the model on data never seen before. We chose to keep entire walking sessions in each set so that the model would never see any observation of the sessions contained in the test set during training. We had 139 sessions in the training set and 35 sessions in the test set.
 
 In certain models such as neural networks, the training set is divided furthermore into a train and a validation set, containing 80% and 20% of the training set respectively. In this case, the model computes the predictions on the train set and the loss over the validation set to determine the model parameters.
 
 For tuning, the training set is used to create five folds which are random partitions of the training set to get five equal sized sub-samples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
 
-![Data splitting.](images/data-splitting.png){#fig-datasplitting width=300}
+![Data splitting.](images/data-splitting.png){#fig-datasplitting width=600}
 
 To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the GWYI for the event prediction.
 
@@ -620,6 +619,8 @@ The first point of comparison is the number of each event detected during the wa
 ![Mean time difference between real and predicted events for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=600}
 
 In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the real time of the event. This could mean that for these events, it would give better results to take one of the first points of the detected sub-phase instead of the point with the model highest probability. Since we do not have theoretical explanation of this phenomena, we can not justify the use of different procedure for either *Heel Strike* or *Toe-Off* events. On the other hand, in the strategy E, all of the event times are estimated near the real ones with no distinction between classes. For each type of event, the estimated time median is at approximately 50 ms before the real event, with a few outliers. Overall, the results given by the event detection are closer to the times given by the gold standard so we retain the strategy E. 
+
+\newpage
 
 ## Detailed performance of the selected model
 
