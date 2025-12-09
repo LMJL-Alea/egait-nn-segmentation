@@ -1,48 +1,66 @@
 # Material {#sec-material}
 
-This section details the data employed in this study. As unit quaternion time-series are used to represent rotations, we start by defining them and linking them to our goal.
+This section is dedicated to describing the data that we used for segmenting gait in the present work. Essentially, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) sensor at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite© mat) as a gold standard to label the gait events. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two data sets. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
 
-## Unit quaternions
+## Unit quaternions {#sec-quaternions}
 
-Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages, as it is a rather compressed representation containing only four values and avoiding the gimbal lock problem presents in other representations. Unit quaternions were therefore chosen as the data type returned by the sensor.
+::: {.aside}
+[AST] We should cite a book or a review paper about quaternions here.
+:::
 
-Quaternions are four-dimensional vectors denoted as $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank 4. Unit quaternions have a norm of 1 and can encode a 3D rotation with a rotation angle $\theta \in [0, 2\pi]$ and a rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
+Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages such as being the most compressed representation of rotation and avoiding the gimbal lock issue. We therefore chose to measure the sensor orientation as a unit quaternion.
+
+Quaternions are four-dimensional vectors denoted by $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank $4$. Unit quaternions have a norm of $1$ and encode a 3D rotation with rotation angle $\theta \in [0, 2\pi]$ and rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
 
 $$
 \mathbf{q} = \left( q_w, q_x, q_y, q_z \right)
-= \text{cos}\left(\frac{\theta}{2}\right) + \left(u_x i + u_y j + u_z k \right) \text{sin}\left(\frac{\theta}{2}\right)
+= \cos \left( \frac{\theta}{2} \right) + \left( u_x i + u_y j + u_z k \right) \cdot \sin \left( \frac{\theta}{2} \right),
 $$ {#eq-quaternions}
 
-with :
+where $i$, $j$, and $k$ generalize the imaginary number $i$ and are such that $i^2 = j^2 = k^2 = ijk = -1$. Note that it is straightforward to show quaternions define through @eq-quaternions have unit norm.
 
-- $i$, $j$, and $k$ generalizing the imaginary number $i$, as $i^2=j^2=k^2=ijk=-1$.
-- $||\mathbf{q}|| = \sqrt{\mathbf{qq}^t} = 1$.
-
-The set of unit quaternions, denoted $\mathbb{H}_u$, possesses interesting properties. The quaternions $\mathbf{q}$ and $-\mathbf{q}$ represent the same rotation. The group is equipped with an identity element $\mathbf{q}^{(0)} = (1,0,0,0)$ which corresponds to the identity rotation, such that $\mathbf{q} \mathbf{q}^{(0)} = \mathbf{q}^{(0)}\mathbf{q} = \mathbf{q}$.
-
-It is possible to use the geodesic distance $d_g$ between two quaternions $\mathbf{q}_1$ and $\mathbf{q}_2$ to define a metric space $(\mathbb{H}_u, d_g)$, with:
+The set of unit quaternions, denoted by $\mathbb{H}_u$, has a number of interesting properties. First, the quaternions $\mathbf{q}$ and $-\mathbf{q}$ represent the same rotation making $\mathbb{H}_u$ a double coverage of the space $\mathrm{SO}_3(\mathbb{R})$ of 3D rotations. Also, $\mathbb{H}_u$ forms a Lie group which is a group and a differentiable Riemannian manifold. As a group, it is in particular equipped with an identity element $\mathbf{q}^{(0)} = (1,0,0,0)$ which corresponds to the identity rotation, such that, for any $\mathbf{q} \in \mathbb{H}_u$, we have $\mathbf{q} \mathbf{q}^{(0)} = \mathbf{q}^{(0)}\mathbf{q} = \mathbf{q}$ and with a composition law $\circ$ given by the Hamilton product:
 
 $$
-d_g (\mathbf{q}_1, \mathbf{q}_2) = ||\text{ln}(\mathbf{q}_1^{-1} \mathbf{q}_2)|| = \text{arccos}\left(2(\mathbf{q}_1 . \mathbf{q}_2)^2 -1\right)
-$$ {#eq-dist-geodesique}
+\begin{aligned}
+\mathbf{q}_1 \circ \mathbf{q}_2 = ( &q_{1w} q_{2w} - q_{1x} q_{2x} - q_{1y} q_{2y} - q_{1z} q_{2z}, \\
+&q_{1w} q_{2x} + q_{1x} q_{2w} + q_{1y} q_{2z} - q_{1z} q_{2y}, \\
+&q_{1w} q_{2y} - q_{1x} q_{2z} + q_{1y} q_{2w} + q_{1z} q_{2x}, \\
+&q_{1w} q_{2z} + q_{1x} q_{2y} - q_{1y} q_{2x} + q_{1z} q_{2w}).
+\end{aligned}
+$$ {#eq-hamilton-product}
 
-with the log-quaternion defined as $\text{ln}(\mathbf{q}) =  \text{ln}\left(\text{exp}\left({\mathbf{u}\dfrac{\theta}{2}}\right)\right)$.
+This is known as quaternion multiplication and, for simplicity, the symbol $\circ$ is often omitted and we simply write $\mathbf{q}_1 \mathbf{q}_2$. Note that the composition law is not commutative. As such, $\mathbb{H}_u$ is an Abelian group. The inverse of a unit quaternion $\mathbf{q}$ is given by its conjugate $\mathbf{q}^{-1} = \mathbf{q}^\star = (q_w, -q_x, -q_y, -q_z)$.
 
-In this application, the sensor orientation is the rotation between the reference frame of origin, here the Earth's reference frame $R_f=(f_1, f_2, f_3)$ and its own reference frame $R_s=(s_1, s_2, s_3)$ formed by the accelerometer, gyroscope, and magnetometer (see @fig-sensor-axis).
+As a differentiable Riemannian manifold, it is also equipped with a natural distance, known as the *geodesic distance*, that can be used to measure the distance between two unit quaternions. For any two quaternions $\mathbf{q}_1$ and $\mathbf{q}_2$, it reads:
+
+$$
+d_g \left( \mathbf{q}_1, \mathbf{q}_2 \right) = \left\| \ln \left( \mathbf{q}_1^{-1} \mathbf{q}_2 \right) \right\| = \arccos \left( 2 \left( \mathbf{q}_1 \cdot \mathbf{q}_2 \right)^2 -1 \right),
+$$ {#eq-geodesic-distance}
+
+where the unit quaternion logarithm is defined as $\ln(\mathbf{q}) = \mathbf{u} \dfrac{\theta}{2}$.
+
+In our application, the sensor orientation is the rotation between the reference frame of origin, here the Earth's reference frame $R_f=(f_1, f_2, f_3)$ and its own reference frame $R_s=(s_1, s_2, s_3)$ formed by the accelerometer, gyroscope, and magnetometer (see @fig-sensor-axis).
 
 ![Sensor reference and axis. [@drouin2023semi]](images/sensor-axis.png){#fig-sensor-axis width=200}
 
-A quaternion time-serie is a set of unit quaternions following a temporal grid $t_1, \dots, t_p$, noted as $\mathbf{Q}_i = (\mathbf{q}_{1i}, \dots, \mathbf{q}_{pi})$. It represents the consecutive 3D hip rotation over time, as four-component vectors.
+A *quaternion time series* (QTS) is an ordered set $\mathbf{Q}$ of unit quaternions along a temporal grid $t_1 < t_2 < \dots < t_p$. We will denote by $\mathbf{q}_{j} = \mathbf{Q}(t_j)$ the unit quaternion of the QTS $\mathbf{Q}$ recorded at time $t_j$. In our application, it represents the orientation of the hip at that time.
 
-## Data acquisition
+## Data acquisition {#sec-data-acquisition}
 
-A wearable sensor was used to record the hip rotation. It contains an accelerometer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is 100 Hz so data is acquired every 10 ms. With this device, the data acquired is in the form of unit quaternion time-series as presented previously.
+We used an IMU sensor to record the hip orientation over time. The IMU was composed of a 3-axis accelerometer, a 3-axis gyroscope and a 3-axis magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is $100$ Hz which corresponds to recording its orientation every $10$ ms. With this device, the data acquired is in the form of unit QTS as presented in @sec-quaternions.
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
-During acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the wearable sensor on their right hip. It implies that subjects were walking approximately nine meters on a straight line. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times are used to know when the gait events actually happened. This data is then used label the quaternion time-series to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
+We asked the participants to walk on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers,
 
-Six subjects have been included in this study (three men and three women) walking at different speeds to have a variety of gait data (see @tbl-subjects). We have in total 174 walking sessions acquired between June and September 2024.
+[allowing a good synchronization between devices.]{.mark}
+
+::: {.aside}
+[AST] We should cite Thibault's paper about synchronization here.
+:::
+
+We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
@@ -83,37 +101,47 @@ Summary of subjects and walking speeds used to train the model.
 
 :::
 
-## Data presentation
+## Data sets {#sec-data-sets}
 
 Sensor data
 
-: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie) at each recorder time. The four coordinates comes from the definition of quaternions as defined in @eq-quaternions. It is important to note that on this figure, the gait cycles are clearly apparent and consistent over time, as it represents a healthy gait, which would not necessarily be the case for subjects having gait disorders.
+: As mentioned before, the IMU sensor records unit QTS representing the orientation of the hip over time, allowing the visualization of each coordinate time series (see @fig-timeserie) at each recorded time point. The four coordinates match the definition of a quaternion provided in @eq-quaternions. It is important to observe that @fig-timeserie displays the gait of a healthy individuals with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
-![Data returned by the wearable sensor as a four-coordinate unit quaternion time-serie.](images/time-serie.png){#fig-timeserie width=350}
+![Data recorded by the IMU sensor as a four-coordinate unit quaternion time series.](images/time-serie.png){#fig-timeserie width=350}
 
 Sensor data preprocessing 
 
-: A centring step is applied on the quaternion time-series to center them around a mean. Supposing we have $n$ time-series $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ on the same time grid $t_1, \dots, t_p$, we can write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, with $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-dist-geodesique) to compute the mean of each quaternion $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ for each time $t_j$. 
+: A centring step is applied on the quaternion time series to center quaternions around their mean. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the 
 
-: $$
-\mathbf{q}_j^{(m)} = \mathbf{Q}^{(m)} (t_j) = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!]
+[Fréchet mean associated to the geodesic distance]{.mark}
+
+::: {.aside}
+[AST] We should cite a paper about how to compute the Fréchet mean on the unit quaternion manifold here.
+:::
+
+$d_g$ (see @eq-geodesic-distance) to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
+
+$$
+\mathbf{q}_j^{(m)} = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!].
 $$ {#eq-mean-qts}
 
-: The centered time-series $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed.
+The centered QTS $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed as:
 
-: $$
-\mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!]
+$$
+\mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!].
 $$ {#eq-centring-qts}
 
-: The other pre-processing step is to switch to a functional representation using cubic splines to be able to compute derivatives [@ramsay2005].
+[The other pre-processing step is to switch to a functional representation using cubic splines to be able to compute derivatives [@ramsay2005].]{.mark}
 
+::: {.aside}
+[AST] We should detail the parameters used for the cubic splines here for the sake of reproducibility.
+:::
 
 Pressure mat data
 
-: The GAITRite© mat measures the feet position on the mat with its sensors while the subject walks on it. It returns directly spatio-temporal parameters such as stride duration, stride length or walking speed (see @tbl-gaitrite-params in the Appendix for a list of all parameters). It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the same time range is used to associate each time on the IMU time-series with a gait event recorder by the mat. We use the pressure mat as a gold standard to label the observations between the different classes and train the model on this labeled data.
+: The GAITRite© mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite© mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
 
-
-## Feature space
+## Feature space {#sec-feature-space}
 
 The feature space is defined by a set of variables that captures the time-varying characteristics of hip rotation. It forms the data used to build machine learning models that will learn its pattern to detect the events associated to each time.
 
