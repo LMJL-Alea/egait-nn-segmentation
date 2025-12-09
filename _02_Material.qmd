@@ -143,46 +143,79 @@ Pressure mat data
 
 ## Feature space {#sec-feature-space}
 
-The feature space is defined by a set of variables that captures the time-varying characteristics of hip rotation. It forms the data used to build machine learning models that will learn its pattern to detect the events associated to each time.
+The feature space is an important piece of machine learning models as it defines the data that will be used to train them. In our application, we constructed a feature space from the raw QTS data recorded by the IMU sensor. First, we need to define what is an observation in our context. An observation corresponds to the data recorded at a given time point $t_j$. Since QTS are ordered sets of unit quaternions, for the $j$-*th* observation (row) of the feature space, we can then use features computed from the data observed at time $t_j$ or any other time points preceding $t_j$. One feature is of course the label of the observation that we get from the gold standard. This variable is available for the train/test process but will not be available at prediction time since it corresponds to the events that we want to predict. The other features are predictors that we compute from the sensor data. The ultimate goal is to design a feature space to label each observation $t_j$ with the gait event happening at that time (if any) using only the predictors computed from the QTS at time points $t_k \le t_j$, with $1 \le k \le j$. In the remainder of this section, we describe the predictors that we computed to build our feature space.
 
-Angular velocity and acceleration
+Angular velocity and acceleration vectors
 
-: Supposing we can compute first and second derivatives of a quaternion time-series over time, we can compute angular velocity and acceleration [@narayan2017]. The angular velocity $\pmb{\Omega}$ is a vector which has for direction the axis of rotation and for quantity the angular velocity.
+: If we can have access to the first and second time derivatives of a QTS, we can compute the *angular velocity vector* $\pmb{\Omega}$ and *angular acceleration vector* $\dot{\pmb{\Omega}}$ [@narayan2017]. These vectors are aligned with the axis of rotation and carry in their norm the angular velocity and acceleration respectively. The angular velocity vector is computed as follows:
 
-: $$
-\pmb{\Omega} = 2 \mathbf{q}^{-1} \dot{\mathbf{q}} \hspace{3mm} \text{with} \hspace{3mm} \dot{\mathbf{q}} = \frac{d \mathbf{q}}{dt} = \frac{1}{2} \mathbf{q} \hspace{1mm} \pmb{\Omega}
+$$
+\begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix}
+= 2 \mathbf{q}^{-1} \dot{\mathbf{q}} \hspace{3mm} \text{with} \hspace{3mm} \dot{\mathbf{q}} = \frac{d \mathbf{q}}{dt} = \frac{1}{2} \mathbf{q} \begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix}.
 $$ {#eq-angular-vel}
 
-: Similarly, the angular acceleration $\dot{\pmb{\Omega}}$ is the angular velocity derivative.
+The angular acceleration vector $\dot{\pmb{\Omega}}$ is then computed as the derivative of the angular velocity vector:
 
-: $$
-\dot{\pmb{\Omega}} = 2 \left( \mathbf{q}^{-1} \ddot{\mathbf{q}} - (\mathbf{q}^{-1}\dot{\mathbf{q}})^2 \right) \hspace{3mm} \text{with} \hspace{3mm} \ddot{\mathbf{q}} = \frac{d^2 \mathbf{q}}{dt^2} = \frac{1}{2} \left( \dot{\mathbf{q}} \hspace{1mm}  \pmb{\Omega} + \mathbf{q} \hspace{1mm}  \dot{\pmb{\Omega}} \right)
+$$
+\begin{bmatrix}
+0 \\
+\dot{\pmb{\Omega}}
+\end{bmatrix}
+= 2 \left( \mathbf{q}^{-1} \ddot{\mathbf{q}} - (\mathbf{q}^{-1}\dot{\mathbf{q}})^2 \right) \hspace{3mm} \text{with} \hspace{3mm} \ddot{\mathbf{q}} = \frac{d^2 \mathbf{q}}{dt^2} = \frac{1}{2} \left( \dot{\mathbf{q}} \begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix} + \mathbf{q} \begin{bmatrix}
+0 \\
+\dot{\pmb{\Omega}}
+\end{bmatrix} \right)
 $$ {#eq-angular-acc}
 
 Euler angles
 
-: The angles named Roll, Pitch and Yaw represent rotations around the three principal axis. Their computation is done using the quaternion time-series, with the following rotation matrix to go from the quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ to the angles.
+: The angles named *Roll*, *Pitch* and *Yaw* represent rotations around the three principal axes. They are computed from a unit quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ using the following formulas:
 
 $$
 \begin{bmatrix}
-\text{Roll} \\
-\text{Pitch} \\
-\text{Yaw}
+\mathrm{Roll} \\
+\mathrm{Pitch} \\
+\mathrm{Yaw}
 \end{bmatrix}
 = 
 \begin{bmatrix}
-\text{atan2} \left(2(q_w q_x + q_y q_z), 1-2(q_x^2 + q_y^2)  \right) \\
-\text{asin} \left(2(q_w q_y - q_x q_z) \right) \\
-\text{atan2} \left(2(q_w q_z + q_x q_y), 1-2(q_y^2 + q_z^2)  \right)
+\arctan\!2 \left(2(q_w q_x + q_y q_z), 1-2(q_x^2 + q_y^2)  \right) \\
+\arcsin \left(2(q_w q_y - q_x q_z) \right) \\
+\arctan\!2 \left(2(q_w q_z + q_x q_y), 1-2(q_y^2 + q_z^2)  \right)
 \end{bmatrix}
 $$ {#eq-rpy}
 
-with $\text{atan2}(y, x)$ returning the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane.
+where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane.
 
 Walking speed
 
-: One of our hypothesis is that the gait can differ depending if the subject walks slowly of faster. Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.
+: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included in the feature space this information.
 
-Feature Space Hyper-parameters
+[Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.]{.mark}
 
-: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* for the time-serie curves. Since derivation is used to compute some predictors, it is useful to smooth the curves so the values are stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$ and is used to fit a cubic smoothing spline to the data. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a certain time, we add on the observation $t_j$ the predictor values from the times $t_{j-1}, \dots, t_{j-lag}$. The feature space length depends on the *spar* parameter as it contains $10 + 9 \times lag$ variables. Finally, a last hyper-parameter is used when we label the observations with the event times from the gold standard. It is called *k* and controls the number of points that we label as part of the event. Since it is not used in both compared strategies, it is explained in the next section while we describe the two strategies.
+::: {.aside}
+[AST] We should explain how we deal with the fact that walking speed is not available at prediction time. Maybe add the figure you showed at your master's discussion about predicting walking speed from the mean angular velocity?
+
+Also it could be worthwhile to compute an instantaneous walking speed from the QTS data only.
+:::
+
+Hyper-parameters
+
+: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* that represents the amount of smoothing that we seek to achieve when fitting cubic splines to the original QTS. Since time derivatives are used to compute some predictors, it is indeed useful to smooth the QTS sufficiently so the derivative values remain stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a given time point $t_j$, we include features computed at $t_j$ as well as the same features computed at time points $t_{j-1}, \dots, t_{j-\mathrm{lag}}$. The size of the feature space therefore depends on the *lag* parameter as it contains
+
+[$10 + 9 \times \mathrm{lag}$ variables.]{.mark}
+
+::: {.aside}
+[AST] We should detail here how we get 10 + 9 * lag variables. I am not clear about the 10 in particular. One is the label, one is walking speed, but the others?
+:::
+
+Finally, a last hyper-parameter is used when we label the observations with the gait event times from the gold standard. It is called *k* and controls the number of points around a gait event that we label as part of the event. In @sec-classification-strategies, we elicit two strategies for building segmentation models, one of which does not use this parameter. Therefore, we differ other details about this parameter in the dedicated section.

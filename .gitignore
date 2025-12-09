@@ -8,7 +8,7 @@
 *_cache/
 /cache/
 *_files/
-template-computo-R.html
+*.html
 logo_text_white.pdf
 template-computo-R.pdf
 /.quarto/
