@@ -1,0 +1,184 @@
+# Methods {#sec-methods}
+
+## Classification strategies
+
+Gait event detection is performed by evaluating and comparing two strategies to classify the observations.
+
+Strategy E: Predicting gait Events
+
+: The strategy E is to directly predict the gait events happening during the walk. We classify the observations in five classes depending if the time corresponds to an event or not:
+
+: - *Right Heel Strike*
+- *Left Toe Off*
+- *Left Heel Strike*
+- *Right Toe Off*
+- *None* (all other times not corresponding to a certain event)
+
+: This strategy is the most direct one as we obtain the event times with the gold standard. However, this classification raises an issue of severe class imbalance with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones. It is clearly represented on the @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the time-serie recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
+
+: ![Time of events represented on a unit quaternion time-serie.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350}
+
+: When predicting events, we choose to label a number of points $k$ as corresponding to the event around the precise event time given by the gold standard. This allows to take into account some uncertainty, as the time range between two points is only 10 ms. For instance, if we have $k=1$, we label 3 observations as part of the event rather than just one. In this case we consider that the event happens in a window of 20 ms instead of just at a precise time. This strategy also reduces somewhat the imbalance between the class proportions.
+
+\newpage
+
+Strategy P: Predicting sub-Phases
+
+: The strategy P consists of predicting sub-phases in the signal that are characterized by the gait events. We label each part in the signal between two events as a sub-phase, leading to four classes for our observations:
+
+: - *Pre-Stance* phase: between *Right Heel Strike* and *Left Toe Off*
+- *Stance* phase: between *Left Toe Off* and *Left Heel Strike*
+- *Pre-Swing* phase: between *Left Heel Strike* and *Right Toe Off*
+- *Swing* phase: between *Right Toe Off* and *Right Heel Strike*
+
+: To name these classes, we based ourselves on a typical cycle starting with the right foot, starting with a stance phase while the right foot is on the ground followed by a swing phase. This classification allows us to have four classes that are less imbalanced, without a class that does not contain events like the *None* class in the first strategy. The downside is that we loose some precision as for the event times and that we need to find the events from the predicted phases after the model predictions.
+
+: ![Example of phases represented on a unit quaternion time-serie.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases-timeserie width=350 fig-pos="H"}
+
+: We represent the sub-phases on the IMU time-serie in the @fig-phases-timeserie where each sub-phase is represented by a different color. It shows that some sub-phases are larger than others as it is clear on this example that the sub-phases *Pre-Stance* and *Pre-Swing* are shorter than the *Stance* and *Swing* ones.
+
+## Supervised classification models
+
+Now that we defined our feature space predictors and the different classes used to classify the data, we can build supervised classification models with them. We define in this part the machine learning models that we compare for both strategies.
+
+Multinomial Regression [@hosmer2013applied]
+
+: A multinomial regression is built by fitting a set of independent binary logistic regressions. We want to classify our observations in $K$ classes. We choose one category to be the baseline and name it $k_0$. We build $K-1$ logit equations modeling the log-odds of a class $k$ versus the class $k_0$. The logit equation for a class $k$ is:
+
+: $$
+log\left( \frac{\mathbb{P}(Y = k | X)}{\mathbb{P}(Y = k_0 | X)} \right) = \beta_{0k} + \beta_k^TX
+$${#eq-logit}
+
+: with $Y$ the class of the observation, $X$ the predictors, $\beta_{0k}$ the intercept and $\beta_{1k}, \dots, \beta_{pk}$ the regression coefficients.
+
+: The softmax function is then used to convert the $K-1$ logit scores into probabilities for each class. Finally, the observation is classified in the class with the highest probability. To fit the model, ie to find the best values for the coefficients, we maximize the log likelihood function.
+
+: When we have a large set of variables, we can regularized the estimation by introducing penalty terms in the log-likelihood function [@hastie2015statistical]. The two main types of penalization are the L1 regularization (also called a Lasso model) and the L2 regularization (also called a Ridge model). The Ridge regression prevents overfitting by adding the term $\lambda \sum_{k=1}^K \beta_k^2$ to the loss function, while the Lasso model selects features by adding the term $\lambda \sum_{k=1}^K |\beta_k|$ to the loss, giving a sparse solution with only some non-zero coordinates. The parameter $\lambda$ is called the regularization parameter.
+
+Decision tree [@kuhn2013applied; @breiman2017classification]
+
+: Decision trees consist of a nested sequence of if-then statements for the predictor classifying data. Observations are assigned to their class according to the variable values. 
+<!-- We can see in the @fig-decisiontree an example of a tree with two splitting, leading to three leaf nodes.  -->
+
+<!-- : ![Basic decision tree.](images/example_tree.png){#fig-decisiontree width=250} -->
+
+: The goal is to classify the observations into smaller and more homogeneous groups, forming rectangular areas within data points. Homogeneity is defined here as how pure the splitting nodes are , meaning that there is a higher proportion of one class in each node. We can use the Gini index to compute purity. In a scenario with $K$ classes, each having probability $p_1, \dots, p_K$, the Gini impurity for a certain node is defined as:
+
+: $$
+G(p) = \sum_{k=1}^K p_k \sum_{j \ne k}^K p_j = \sum_{k=1}^K p_k (1-p_k) = 1 - \sum_{k=1}^K (p_k)^2
+$${#eq-gini}
+
+: This index is minimal when one of the probabilities tends toward zero, indicating that the node is pure. To build the tree, the model builds splitting nodes by evaluating each splitting point (ie values taken by variables to split observations into groups) to find the one minimizing the Gini index, until a stopping criteria is met such as a maximum tree depth.
+
+Bagged trees, Random forest and Boosted trees [@kuhn2013applied]
+
+: A bagged trees model is an ensemble of $M$ decision trees trained in parallel. Each decision tree is built with a bootstrap sample of the original data, which is a sample of same size than the original data by selecting random observations with replacement. Then, each of these trees is used to generate a prediction for a new observation. Finally, the observation is classified in the class that has collected the greatest number of votes from all the trees.
+
+: A random forest is a similar model, also using a number of decision trees. The model also trains a number of trees in parallel on bootstrap samples of the original data. The difference is that, at each split, a random subset of variables is selected to find the best predictors within this subset. The observations are then classified as usual. The prediction is done as seen before, with each tree voting for a class and selecting the majority to classify the observation.
+
+: Finally, boosted trees train a number of decision trees sequentially to learn from the previous tree mistakes and put a higher weight on previously misclassified observations. The trees are also trained on bootstrapped samples, selecting a random subset of variables at each node. The final prediction is the weighted sum of the predictions from each tree with the weights determined by the performance of the trees.
+
+$k$-Nearest Neighbors [@cover1967nearest]
+
+: A $k$-Nearest Neighbors model finds the $k$ closest data points to a given input and makes prediction based on the majority class within its neighbors. This model is non-parametric as it does not make assumption about the underlying data.
+
+<!-- : ![A point classified in the majority class within its $k = 3$ neighbors.](images/example_3nn.png){#fig-knn width=300} -->
+
+To calculate the distance between the input and its neighbors, the Minkowski distance can be used. It is defined as:
+
+$$
+d(x, y) = \left[ \sum_{i=1}^n (x_i-y_i)^p \right]^{1/p}
+$${#eq-minkowski}
+
+This distance is a generalization of multiple well-know distances as we find the Euclidean distance when $p = 2$ and the Manhattan distance when $p = 1$.
+
+Neural networks [@varma2018]
+
+: Neural Networks are deep learning models inspired by the human brain. They consist of interconnected nodes organized in layers which process the data by passing it from one layer to the next. The model contains two essential parameters: weights on each connection and biases on each node. The input data is given to the input layer and then passes through the hidden layers. At each layer, a pre-activation is computed with the weights and biases and is transformed as an activation with non-linear functions (usually the function *ReLU*). Finally, the result goes into the output layer which uses an output function (the *softmax* function for more than two classes) to return the predicted class for each observation. It learns data pattern by adjusting the parameters during forward and backward propagation for each observation to minimize a loss that represents the difference between real and predicted values. Most often, the loss used is the cross-entropy which is defined as followed for the observation $m$:
+
+: $$
+\square(m) = - \sum_{k=1}^K t_k(m) \text{log}(y_k(m))
+$$ {#eq-crossentropy}
+
+: with:
+
+: - $t_k$ the ground truth.
+: - $y_k$ the classification probability.
+
+: These models are complex and rely on a efficient algorithm for the parameter update and an adapted activation function, as well as possible utilization of batch normalization, regularization or dropout to find a model with a good complexity for the data. Tuning is done to find the best hyper-parameters such as the number of layers and nodes or the learning rate.
+
+## Dealing with imbalanced data
+
+By classifying specific times in a time-serie, we work with imbalanced data. Especially in the strategy E when we predict events, a small proportion of the data is in the target classes, and most of the data points are in the negative class. In this situation, the model learns adequate information about the majority class but doesn't have enough information on the minority classes. This implies bad predictions on the target classes because the model misses them.
+
+A lot of sampling algorithms exist to address this issue such as random oversampling or random undersampling which add or remove observations from certain classes to create a balanced dataset. More complex methods exist, we can cite the popular SMOTE [@chawla2002] and ADASYN [@haibo2008] algorithms that create synthetic data by considering the classes of the nearest neighbors of random observations. Although these algorithms are very popular, they did not show good results for our data. We are making the hypothesis that our data is too imbalanced for these methods.
+
+To tell the model to pay more attention to the patterns in the minority classes, an effective way is to put a larger weight on these classes compared to the negative one. More precisely, the weight given to each observation specifies how much this observation influences the model's estimation In order for the model to be biased in favor of the observations considered more important, in our case those belonging to the minority classes, the weights of the observations are integrated into the cost function. This makes it possible to regulate the cost of misclassification, in the sense that misclassifying more important observations will be more costly, encouraging the model to avoid this situation [@hashemi2018].
+
+When the classes are not too imbalanced, such as in our second strategy of phase prediction, we can use the inverse class frequency weights where the weight on the class $k$ is the following:
+
+$$
+\omega_k = \frac{n}{n_{classes} \hspace{1mm} n_k}
+$$ {#eq-inv-class-frequency}
+
+with:
+
+- $n$ the total number of observations.
+- $n_{classes}$ the number of classes.
+- $n_k$ the number of observations in the class $k$.
+
+This formula gives balanced weights but we can also choose class weights manually and tune them as one of our model parameter.
+
+## Performance metrics
+
+To tune and evaluate the models, we need to use metrics adapted to the data. Here, depending on the strategy used, we can't use the same metrics as the labeled classes are very different.
+
+First of all, for the strategy P predicting sub-phases, we have four classes that are not severely unbalanced and all having the same importance. In this case, we can simply use the accuracy metric to tune and evaluate our models. It is the most widely used metric in machine learning and is defined as the number of correct predictions divided by the total number of predictions
+
+For the strategy E where we directly predict events, we are in a case of severe class imbalance so we can't use accuracy to correctly evaluate the model. Indeed, since the model will predict almost only the majority class which is the negative one, the predictions in this class will be good, implying that the accuracy will be high because most of the observations will be well-classified. This does not take into account the observations in the minority classes which are not predicted.
+
+We need to use other metrics that are adapted to this situation. An important tool is the confusion matrix which indicate the number of predictions in each class compared to the real classes of the observations.
+
+In a binary classification, The matrix contains the values of the True Positives ($TP$), False Positives ($FP$), True Negatives ($TN$) and False Negatives ($FN$). Two of the metrics that can be calculated from this matrix are known as Sensitivity and Specificity. The Sensitivity measures how well the model has found all occurrences of our positive class, meaning that a low sensitivity implies a lot of missing observations in this class. The Specificity measures how well the model predicts the negative class. In a class imbalance problem, the Sensitivity is essential to know if the model achieved to predict correctly our minority class represented as the positive class.
+
+In a multiclass classification, we can extend these metrics to use them with a different number of positive classes. In our case, we have four classes containing less observations and having to be correctly predicted, while the other class is the majority class. 
+
+We define a confusion matrix with multiple positive classes and one negative class (see @fig-confusion-matrix). The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,.}$ represents the number of observations from the class $i$, while $c_{.,j}$ represents the number of observations that the model predicted to be in the class $j$.
+
+![Confusion matrix for five classes including the *None* one represented by the letter N and four classes of interest named P1 to P4.](images/confusion-matrix.png){#fig-confusion-matrix width=300 pos="H"}
+
+We now define our extensions of Sensibility and Specificity with these notations, that can be called Macro-Average Sensibility and Macro-Average Specificity [@mortaz2020]. The formulas are generalized for a total of $K$ classes including one class not containing any relevant information, in our case the *None* class.
+
+$$
+\text{MA Sensitivity} = \frac{1}{K-1} \sum_{i=1}^{K-1} \frac{c_{i,i}}{c_{i,.}}
+$${#eq-masensitivity}
+
+$$
+\text{MA Specificity} = \frac{1}{K} \sum_{i=1}^K \frac{\sum_{j \ne k \ne i} c_{j,k} + \sum_{j \ne i} c_{j,j}}{\sum_{j \ne i} c_{.,j}}
+$${#eq-maspecificity}
+
+These metrics can be used to evaluate our model to know if the classes of interest are correctly predicted.
+
+To tune a model, we need a metric that combines the information from the previously defined MA Sensitivity and MA Specificity. The weighted Youden index [@li2013weighted] has this function, allowing the user to put a different weight on the Sensitivity and the Specificity. We generalize the weighted Youden index with the Macro-Average versions of the metrics and name it the Generalized Weighted Youden Index (GWYI):
+
+$$
+\text{GWYI} = 2(w \times \text{MA Sensitivity} + (1-w) \times \text{MA Specificity}) -1
+$${#eq-youden}
+
+with $w \in [0,1]$ representing the weight put on the MA Sensitivity.
+
+The weight parameter controls the importance of each metric. The greater it is, the more weight we put on the MA Sensitivity. In our case, we chose to put a weight of $0.7$ on the MA Sensitivity because we wanted to make sure not to forget observations in the minority classes, even if it meant predicting too many of these observations.
+
+## Data splitting and Tuning strategy
+
+To correctly tune and evaluate the model, data is initially split in two sets: the training set representing 80% of observations and the test set representing 20% of observations. The key is to never use the test set during training or tuning to be able to evaluate the model on data never seen before. We chose to keep entire walking sessions in each set so that the model would never see any observation of the sessions contained in the test set during training. We had 139 sessions in the training set and 35 sessions in the test set.
+
+In certain models such as neural networks, the training set is divided furthermore into a train and a validation set, containing 80% and 20% of the training set respectively. In this case, the model computes the predictions on the train set and the loss over the validation set to determine the model parameters.
+
+For tuning, the training set is used to create five folds which are random partitions of the training set to get five equal sized sub-samples. In each fold, data is then split into a train and an evaluation set, containing 90% and 10% of the data respectively (see @fig-datasplitting). This ensures that the tuning result is relevant since since its outcome is the average of the scores obtained on the five folds.
+
+![Data splitting.](images/data-splitting.png){#fig-datasplitting width=600}
+
+To tune hyper-parameters, automated tuning was used by grid search which is an exhaustive search in the hyper-parameter space. For each of our parameter, we set a grid of values to be tested. Every combination of the values is then evaluated to get the best possible combination of hyper-parameter values for a certain metric. As mentioned before, we used the accuracy for the phase prediction and the GWYI for the event prediction.
+
+Now that we defined all methods and tools necessary to build machine learning models on our data, we can present our results.

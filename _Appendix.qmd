@@ -1,0 +1,314 @@
+# Appendix {.unnumbered}
+
+::: {#tbl-gaitrite-params tbl-pos="H"}
+
+```{r}
+#| layout="[45, -10, 45]"
+
+tibble::tibble(
+  param = c(
+    "Total distance (cm)",
+    "Total duration (s)",
+    "Speed (cm/s)",
+    "Normalized speed",
+    "Number of steps",
+    "Walking pace (step/m)",
+    "Difference of step duration (s)",
+    "Difference of step length (cm)",
+    "Difference of cycle duration (s)"
+  ),
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    param = "Global Parameters",
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+
+tibble::tibble(
+  param = c(
+    "Step duration (s)",
+    "Cycle duration (s)",
+    "Step length (cm)",
+    "Cycle length (cm)",
+    "Step width (cm)",
+    "Simple support phase (%)",
+    "Double support phase (%)",
+    "Stance phase (%)",
+    "Swing phase (%)",
+    "Normalized step",
+    "Foot rotation (°)"
+  ),
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    param = "Bilateral Parameters",
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Spatio-temporal parameters returned by the GAITRite© pressure mat.
+
+:::
+
+
+::: {#tbl-tuning-res-events tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  model = c(
+    rep("Multinomial Regression", 6),
+    rep("Decision Tree", 6),
+    rep("Bagged Trees", 6),
+    rep("Random Forest", 6),
+    rep("Boosted Trees", 8),
+    rep("KNN", 5),
+    rep("Neural Network", 7)
+  ),
+  param = c(
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`penalty`",
+    "`mixture`",
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`tree_depth`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`tree_depth`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`trees`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`trees`",
+    "`min_n`",
+    "`tree_depth`",
+    "`learn_rate`",
+    "spar",
+    "n_lag",
+    "k",
+    "`neighbors`",
+    "`dist_power`",
+    "spar",
+    "n_lag",
+    "k",
+    "weight on positive classes",
+    "`hidden_units`",
+    "`learn_rate`",
+    "`dropout`"
+  ),
+  values = c(
+    "0.4",
+    "5",
+    "1",
+    "80",
+    "0.0001",
+    "1",
+    "0.3",
+    "5",
+    "1",
+    "80",
+    "5",
+    "7",
+    "0.4",
+    "4",
+    "1",
+    "60",
+    "6",
+    "32",
+    "0.6",
+    "4",
+    "2",
+    "80",
+    "900",
+    "40",
+    "0.4",
+    "4",
+    "2",
+    "80",
+    "400",
+    "40",
+    "5",
+    "0.01",
+    "0.4",
+    "5",
+    "5",
+    "5",
+    "2",
+    "0.4",
+    "5",
+    "1",
+    "80",
+    "rep(500, 4)",
+    "0.01",
+    "0.1"
+  )
+) |>
+  dplyr::group_by(model) |>
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |>
+  dplyr::ungroup() |>
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )
+    ),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(
+      columns = param,
+      rows = param %in% c("spar", "n_lag", "k")
+    )
+  ) |>
+  gt::cols_label(
+    model = "Model",
+    param = "Parameter",
+    values = "Optimal value"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |>
+  gt::fmt_markdown(columns = param)
+```
+
+Optimal parameters for event detection for each tuned model.
+
+:::
+
+::: {#tbl-tuning-res-phases tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  model = c(
+    rep("Multinomial Regression", 4),
+    rep("Decision Tree", 4),
+    rep("Bagged Trees", 4),
+    rep("Random Forest", 4),
+    rep("Boosted Trees", 6),
+    rep("KNN", 4),
+    rep("Neural Network", 5)
+  ),
+  param = c(
+    "spar",
+    "n_lag",
+    "`penalty`",
+    "`mixture`",
+    "spar",
+    "n_lag",
+    "`tree_depth`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "`tree_depth`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "`trees`",
+    "`min_n`",
+    "spar",
+    "n_lag",
+    "`trees`",
+    "`min_n`",
+    "`tree_depth`",
+    "`learn_rate`",
+    "spar",
+    "n_lag",
+    "`neighbors`",
+    "`dist_power`",
+    "spar",
+    "n_lag",
+    "`hidden_units`",
+    "`learn_rate`",
+    "`dropout`"
+  ),
+  values = c(
+    "0.4",
+    "5",
+    "0.0001",
+    "1",
+    "0.6",
+    "4",
+    "6",
+    "13",
+    "0.4",
+    "4",
+    "8",
+    "40",
+    "0.7",
+    "5",
+    "900",
+    "2",
+    "0.7",
+    "5",
+    "900",
+    "3",
+    "12",
+    "0.1",
+    "0.7",
+    "5",
+    "10",
+    "1",
+    "0.4",
+    "4",
+    "rep(500, 3)",
+    "0.1",
+    "0.1"
+  )
+) |>
+  dplyr::group_by(model) |>
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |>
+  dplyr::ungroup() |>
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )
+    ),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(
+      columns = param,
+      rows = param %in% c("spar", "n_lag")
+    )
+  ) |>
+  gt::cols_label(
+    model = "Model",
+    param = "Parameter",
+    values = "Optimal value"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |>
+  gt::fmt_markdown(columns = param)
+```
+
+Optimal parameters for phase detection for each tuned model.
+
+:::

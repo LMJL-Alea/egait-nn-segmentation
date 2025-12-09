@@ -1,0 +1,85 @@
+# Introduction {#sec-introduction}
+
+## Gait analysis
+
+[AST] This paragraph could be better motivated using Thibault's suggestion: 
+
+> les déficits fonctionnels locomoteurs (ou événement grave comme une chute) sont de très bons prédicteurs de la progression vers la perte d'autonomie et la dépendance. 
+
+> Aujourd'hui, dans la parcours de vie des personnes âgées, il s'agit de repérer très tôt (le plus tôt) les personnes à risque des deux grandes entités gériatriques majeurs : chute et déclin cognitif (les deux étant en grande partie liés), qui passent entre autres par des tests de mobilité mobilisés pour évaluer les interactions cognitivo-motrices chez les personnes âgées 
+
+> Vitesse de marche (allure normale et rapide), qui est un très robuste prédicteur du déclin moteur et cognitive avec l'avancée en âge, et d'états de santé comme la chute et mortalité (avec changement significatif minimum - 5cm:s- et changement cliniquement significatif - 10 cm/s) connus)
+
+> avec vitesse de marche évaluée en double tâche, et les indicateur de variabilité de la marche, toutes indicateurs de fluctuation stride-to-stride des paramètres spatio-temproels de la marche.
+
+> Cf. papier de consensus mondial de Montero-Odasso et al (2019).
+
+The study of the Human gait has shown great promises in a number of health applications, such as patients diagnosed with neurodegenerative disorders or patients in rehabilitation programs, notably among the elderly. It has been shown that gait parameters including walking speed or gait variability are very good indicators of their general health, whether it is their physical health or their cognition [@beauchet2016poor; @annweiler2009risk]. 
+
+To monitor gait, various methods such as motion capture systems or pressure mats are widely used due to their reliability but they require patients to travel to a health center owning a device. Furthermore, the measures are made in front of medical workers leading to an observational bias in the patient's performance. To address these issues, wearable sensors are increasingly used for gait analysis as they are smaller, cheaper and more convenient than more traditional methods as they can be used outside of medical structures.
+
+Gait analysis is based on the cyclical phenomenon of walking which can be decomposed into a sequence of *strides*, each composed of two *steps*. A stride is more formally called a *gait cycle* and is a precise biomechanical concept which is the elementary element of gait analysis. We define a gait cycle as the set of movements performed between two consecutive contacts of the heel of the same foot with the ground. The goal of this paper is to present a novel method to detect key events happening during gait cycles. The added benefits of such a method are two-fold: (i) to segment the gait into strides and (ii) to compute a number of useful gait parameters.
+
+More precisely, the key events are the moments where a foot touches or leaves the ground. They are called *Heel Strike* and *Toe Off* respectively and they can be used to segment the gait cycle in phases. The stance phase corresponds to the moments when the foot is in contact with the ground and can be found between the *Right Heel Strike* and *Left Toe Off* events when a cycle starts with the right foot. The stance phase lasts generally 60% of the entire stride and is followed by the swing phase when the right foot is not anymore in contact with the ground (see @fig-walking-cycle).
+
+![Events and phases of a typical gait cycle. [^jacquelin-perry]](images/walking-cycles.png){#fig-walking-cycle width=400}
+
+[^jacquelin-perry]: Figure annotated from Jaquelin Perry's one on [Wikipedia](https://commons.wikimedia.org/wiki/File:GaitCycle_by_JaquelinPerry.jpg).
+
+In healthy gaits, a gait cycle usually lasts one second and the time difference between two events can be as little as 100 ms. It is therefore critical to elaborate a very precise method to identify the four events for providing an accurate estimate of gait parameters.
+
+## State of the art
+
+In the past, several methods for gait cycle segmentation and event detection have been studied based on signals recorded from wearable sensors placed on different parts of the body. In this secyion, we layout an overview of proposed methods by grouping them into categories, with variations related to the position of sensors on the body, the type of sensor measurement system used, and the characteristics of the signal.
+
+Search for feature points: Peak Detection and zero-crossing
+
+: Peak detection algorithms exploit the semi-periodic properties of the gait cycle, assuming that specific events during a gait cycle typically match the maxima or minima of a recorded signal. Several algorithms based on this method have been developed. Spatio-temporal gait parameters have been determined from the acceleration signal of a sensor by using peak detection and zero-crossing methods to identify stride cycles
+
+[AST] what's a stride cycle?
+
+ [@zijlstra2003assessment]. Some peak detection algorithms have been developed to work on any kind of signal [@jiang2017robust]. Others are instead implemented to detect gait events on a specific signal, often Heel-Strike on acceleration data [@lueken2019peak]. Most methods detect Heel-Strike and Toe-off events by identifying minima, maxima or zero-crossing of acceleration time-series [@gonzalez2010real;@mariani2013quantitative;@panebianco2018analysis]. These events can be called Initial Contact and Terminal Contact and have also been identified on the foot inclination angle in the sagittal plane [@nazarahari2022foot].
+
+Analysis of dynamic properties: Wavelet Transform
+
+: To detect gait events in recorded signals, another method is wavelet transform because it allows detection of a specified frequency at a specified time. This method has been used to detect *Heel Strike* and *Toe Off* events on an angular velocity signal by using multi-resolution wavelet decomposition [@aminian2002spatio]. The signal is decomposed into wavelet packages
+
+[AST] Packets?
+
+, using high-scale and low-scale filters
+
+[AST] high-pass and low-pass filters?
+
+. In @mccamley2012enhanced, the signal of the vertical acceleration is smoothed by integrating and then differentiating using a Gaussian continuous wavelet transform (CWT). Events are found on minima and maxima of the differentiated signal. Furthermore, a method called sparsity-assisted wavelet denoising (SWAD) has been developed to segment the signal in three events: mid-stance, toe-off and heel-strike [@prateek2019gait]. It uses a combination of linear time-invariant filters, wavelets and sparsity-based methods to extract a coefficient vector of discrete wavelet transform (DTW). That generates a sparse template of moving segments of gyroscope measurements.
+
+Pattern-matching: Dynamic Time Warping (DTW)
+
+: To segment signals, another method is pattern-matching. Dynamic time warping is widely used for this matter. It allows identification of patterns with different lengths and it matches signals non-linearly. Thus it is commonly used to evaluate the similarity between time-series. This method has been used on an acceleration signal to identify gait cycles [@ghersi2020gait]. In another study, multi-dimensional subsequence DTW (msDTW) was used to segment strides using information from different axes of an accelerometer and a gyroscope at the same time [@barth2015stride].
+
+Hidden Markov Models
+
+: Hidden Markov Models (HMMs) are machine learning models that can be used to simultaneously segment and classify data. In gait analysis, hidden states of the HMM are viewed as activity classes or gait phases. Continuous HMM with Gaussian mixture model are often used to model the outputs. Each cycle can be modeled with a circular left to right HMM, included in a more global HMM model to classify walking activities [@panahandeh2013continuous]. Other algorithms aim at detecting four gait events which are Heel-Strike, Flat-Foot, Heel-Off and Toe-Off. They use a four-state left to right HMM with observations following a multivariate Gaussian distribution [@mannini2011hidden;@garcia2022adaptive]. Hierarchical HMMs have shown to perform better than peak detection and dynamic time warping algorithms on walking data [@haji2018segmentation].
+
+Other Machine Learning methods
+
+: Many studies on gait analysis use wearable sensors and machine learning. A study showed that most used methods for this purpose are SVM and CNN, and are largely used to detect diseases or recognize activities when analyzing gait data [@saboor2020latest]. SVM divides a set of objects into classes with widest possible margin at the hyperplane boundaries. Neural Networks use interconnected nodes organized in layers to process information and learn patterns through back-propagation and make predictions using activation functions.
+
+: Studies show good results when using machine learning to classify gait of patients having trouble walking, for instance patients with Parkinson Disease [@tahir2012parkinson;@wahid2015classification], or to extract gait parameters [@rampp2014inertial;@hannink2016sensor]. These studies mostly use artificial neural networks but do not address the problem of the segmentation of the signal recorded by the sensors. Similarly, in [@farah2019design], a logistic regression tree is used to classify gait phases in a stride but not to directly segment the signal into strides.
+
+: For the specific task of segmentation, recurrent neural networks have shown good results for identifying Heel-Strike and Toe-off events with pressure sensors, accelerations and Euler angles [@prado2019gait]. Another study compared unsupervised machine learning (k-means) with supervised one (SVM and CNN), showing that CNNs were performing the best to predict stance and swing phases [@potluri2019machine]. Lastly, in another study, 24 time-series from three sensors’ accelerometers and gyroscopes 
+
+[AST] do you mean 3-axis accelerometers and gyroscopes?
+
+were used as inputs to a 6 layers CNN to estimate the likelihood of the corresponding input sample, given a specific gait event [@gadaleta2019deep]. For instance, the signal can be segmented with the initial contact of the right foot if this gait event is chosen in the model. This method was shown to perform better than a wavelet transform algorithm.
+
+We did not find in the literature a method based on hip orientation data represented as unit quaternion time-series which is the particularity of the data type used in our work.
+
+[AST] Maybe we should say at the beginning of the section what we aim to accomplish. Then, summarize literature and then say that none of the methods found in the literature address our particular problem.
+
+ Furthermore, most methods presented either segment strides during a walking session or detect events inside already segmented strides. 
+ 
+ [AST] Lise's idea was to do that: first segment strides, then segment phases inside each stride. Would be nice to compare. Outside scope here. But I do not know if we should stress that this strategy is not good, especially since we do not provide a comparison.
+ 
+ We propose here a method segmenting the gait cycles and detecting key gait events at the same time with a unique model.
+
+The paper is structured as follows. @sec-material focuses on an in-depth introduction of the data type used in this work, from data acquisition to raw data properties to feature space elaboration. @sec-methods describes the strategies and methods used (i) to implement models that accounts for the specificities of our data and (ii) to tune and evaluate them appropriately. @sec-results presents a systematic comparison of implemented models with a motivated choice that leads to the evaluation of a final model. Finally, @sec-discussion summarises the present work and provides a discussion about its limitations and about next steps to further validate the model. All codes were developed in R [@Rlanguage] using the [{tidymodels}](https://www.tidymodels.org) framework [@tidymodels].

@@ -1,0 +1,160 @@
+# Material {#sec-material}
+
+This section details the data employed in this study. As unit quaternion time-series are used to represent rotations, we start by defining them and linking them to our goal.
+
+## Unit quaternions
+
+Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages, as it is a rather compressed representation containing only four values and avoiding the gimbal lock problem presents in other representations. Unit quaternions were therefore chosen as the data type returned by the sensor.
+
+Quaternions are four-dimensional vectors denoted as $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank 4. Unit quaternions have a norm of 1 and can encode a 3D rotation with a rotation angle $\theta \in [0, 2\pi]$ and a rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
+
+$$
+\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)
+= \text{cos}\left(\frac{\theta}{2}\right) + \left(u_x i + u_y j + u_z k \right) \text{sin}\left(\frac{\theta}{2}\right)
+$$ {#eq-quaternions}
+
+with :
+
+- $i$, $j$, and $k$ generalizing the imaginary number $i$, as $i^2=j^2=k^2=ijk=-1$.
+- $||\mathbf{q}|| = \sqrt{\mathbf{qq}^t} = 1$.
+
+The set of unit quaternions, denoted $\mathbb{H}_u$, possesses interesting properties. The quaternions $\mathbf{q}$ and $-\mathbf{q}$ represent the same rotation. The group is equipped with an identity element $\mathbf{q}^{(0)} = (1,0,0,0)$ which corresponds to the identity rotation, such that $\mathbf{q} \mathbf{q}^{(0)} = \mathbf{q}^{(0)}\mathbf{q} = \mathbf{q}$.
+
+It is possible to use the geodesic distance $d_g$ between two quaternions $\mathbf{q}_1$ and $\mathbf{q}_2$ to define a metric space $(\mathbb{H}_u, d_g)$, with:
+
+$$
+d_g (\mathbf{q}_1, \mathbf{q}_2) = ||\text{ln}(\mathbf{q}_1^{-1} \mathbf{q}_2)|| = \text{arccos}\left(2(\mathbf{q}_1 . \mathbf{q}_2)^2 -1\right)
+$$ {#eq-dist-geodesique}
+
+with the log-quaternion defined as $\text{ln}(\mathbf{q}) =  \text{ln}\left(\text{exp}\left({\mathbf{u}\dfrac{\theta}{2}}\right)\right)$.
+
+In this application, the sensor orientation is the rotation between the reference frame of origin, here the Earth's reference frame $R_f=(f_1, f_2, f_3)$ and its own reference frame $R_s=(s_1, s_2, s_3)$ formed by the accelerometer, gyroscope, and magnetometer (see @fig-sensor-axis).
+
+![Sensor reference and axis. [@drouin2023semi]](images/sensor-axis.png){#fig-sensor-axis width=200}
+
+A quaternion time-serie is a set of unit quaternions following a temporal grid $t_1, \dots, t_p$, noted as $\mathbf{Q}_i = (\mathbf{q}_{1i}, \dots, \mathbf{q}_{pi})$. It represents the consecutive 3D hip rotation over time, as four-component vectors.
+
+## Data acquisition
+
+A wearable sensor was used to record the hip rotation. It contains an accelerometer, a gyroscope and a magnetometer. Subjects were wearing the sensor on their right hip (see @fig-sensor-position). The frequency of the sensor is 100 Hz so data is acquired every 10 ms. With this device, the data acquired is in the form of unit quaternion time-series as presented previously.
+
+![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
+
+During acquisitions, subjects were walking on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the wearable sensor on their right hip. It implies that subjects were walking approximately nine meters on a straight line. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the times where the subject feet touche and leave the ground at each step, meaning that these times are used to know when the gait events actually happened. This data is then used label the quaternion time-series to train the model. To use the two devices simultaneously, they were started at the same time by the same person with their two indexes, allowing a good synchronization between devices.
+
+Six subjects have been included in this study (three men and three women) walking at different speeds to have a variety of gait data (see @tbl-subjects). We have in total 174 walking sessions acquired between June and September 2024.
+
+::: {#tbl-subjects tbl-pos="H"}
+
+```{r}
+data.frame(
+  id = c("MBA", "MBO", "MSI", "MTR", "NNE", "TDE"),
+  gender = c("M", "F", "F", "M", "F", "M"),
+  age = c("50-60", "20-30", "20-30", "20-30", "20-30", "50-60"),
+  slow = c(60, 73, 67, 77, 57, 61),
+  intermediate = c(116, 122, 115, NA, 116, NA),
+  preferential = c(145, 145, 148, 132, 147, 120),
+  fast = c(199, 188, 179, 185, 190, 193)
+) |>
+  gt::gt() |>
+  gt::tab_spanner(
+    label = "Walking speed (cm/s)",
+    columns = c(slow, intermediate, preferential, fast)
+  ) |>
+  gt::cols_label(
+    id = "ID",
+    gender = "Gender",
+    age = "Age range (years)",
+    slow = "Slow",
+    intermediate = "Intermediate",
+    preferential = "Preferential",
+    fast = "Fast"
+  ) |>
+  gt::sub_missing() |>
+  gt::opt_stylize(style = 6, color = 'gray') |>
+  gt::cols_align(align = "center") |>
+  gt::tab_style(
+    style = "vertical-align:top",
+    locations = gt::cells_column_labels()
+  )
+```
+
+Summary of subjects and walking speeds used to train the model.
+
+:::
+
+## Data presentation
+
+Sensor data
+
+: As mentioned before, the wearable sensor returns unit quaternion time-series representing the rotation of the hip over time, allowing visualization of each coordinate time-serie (see @fig-timeserie) at each recorder time. The four coordinates comes from the definition of quaternions as defined in @eq-quaternions. It is important to note that on this figure, the gait cycles are clearly apparent and consistent over time, as it represents a healthy gait, which would not necessarily be the case for subjects having gait disorders.
+
+![Data returned by the wearable sensor as a four-coordinate unit quaternion time-serie.](images/time-serie.png){#fig-timeserie width=350}
+
+Sensor data preprocessing 
+
+: A centring step is applied on the quaternion time-series to center them around a mean. Supposing we have $n$ time-series $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ on the same time grid $t_1, \dots, t_p$, we can write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, with $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-dist-geodesique) to compute the mean of each quaternion $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ for each time $t_j$. 
+
+: $$
+\mathbf{q}_j^{(m)} = \mathbf{Q}^{(m)} (t_j) = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!]
+$$ {#eq-mean-qts}
+
+: The centered time-series $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed.
+
+: $$
+\mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!]
+$$ {#eq-centring-qts}
+
+: The other pre-processing step is to switch to a functional representation using cubic splines to be able to compute derivatives [@ramsay2005].
+
+
+Pressure mat data
+
+: The GAITRite© mat measures the feet position on the mat with its sensors while the subject walks on it. It returns directly spatio-temporal parameters such as stride duration, stride length or walking speed (see @tbl-gaitrite-params in the Appendix for a list of all parameters). It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the same time range is used to associate each time on the IMU time-series with a gait event recorder by the mat. We use the pressure mat as a gold standard to label the observations between the different classes and train the model on this labeled data.
+
+
+## Feature space
+
+The feature space is defined by a set of variables that captures the time-varying characteristics of hip rotation. It forms the data used to build machine learning models that will learn its pattern to detect the events associated to each time.
+
+Angular velocity and acceleration
+
+: Supposing we can compute first and second derivatives of a quaternion time-series over time, we can compute angular velocity and acceleration [@narayan2017]. The angular velocity $\pmb{\Omega}$ is a vector which has for direction the axis of rotation and for quantity the angular velocity.
+
+: $$
+\pmb{\Omega} = 2 \mathbf{q}^{-1} \dot{\mathbf{q}} \hspace{3mm} \text{with} \hspace{3mm} \dot{\mathbf{q}} = \frac{d \mathbf{q}}{dt} = \frac{1}{2} \mathbf{q} \hspace{1mm} \pmb{\Omega}
+$$ {#eq-angular-vel}
+
+: Similarly, the angular acceleration $\dot{\pmb{\Omega}}$ is the angular velocity derivative.
+
+: $$
+\dot{\pmb{\Omega}} = 2 \left( \mathbf{q}^{-1} \ddot{\mathbf{q}} - (\mathbf{q}^{-1}\dot{\mathbf{q}})^2 \right) \hspace{3mm} \text{with} \hspace{3mm} \ddot{\mathbf{q}} = \frac{d^2 \mathbf{q}}{dt^2} = \frac{1}{2} \left( \dot{\mathbf{q}} \hspace{1mm}  \pmb{\Omega} + \mathbf{q} \hspace{1mm}  \dot{\pmb{\Omega}} \right)
+$$ {#eq-angular-acc}
+
+Euler angles
+
+: The angles named Roll, Pitch and Yaw represent rotations around the three principal axis. Their computation is done using the quaternion time-series, with the following rotation matrix to go from the quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ to the angles.
+
+$$
+\begin{bmatrix}
+\text{Roll} \\
+\text{Pitch} \\
+\text{Yaw}
+\end{bmatrix}
+= 
+\begin{bmatrix}
+\text{atan2} \left(2(q_w q_x + q_y q_z), 1-2(q_x^2 + q_y^2)  \right) \\
+\text{asin} \left(2(q_w q_y - q_x q_z) \right) \\
+\text{atan2} \left(2(q_w q_z + q_x q_y), 1-2(q_y^2 + q_z^2)  \right)
+\end{bmatrix}
+$$ {#eq-rpy}
+
+with $\text{atan2}(y, x)$ returning the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane.
+
+Walking speed
+
+: One of our hypothesis is that the gait can differ depending if the subject walks slowly of faster. Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.
+
+Feature Space Hyper-parameters
+
+: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* for the time-serie curves. Since derivation is used to compute some predictors, it is useful to smooth the curves so the values are stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$ and is used to fit a cubic smoothing spline to the data. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a certain time, we add on the observation $t_j$ the predictor values from the times $t_{j-1}, \dots, t_{j-lag}$. The feature space length depends on the *spar* parameter as it contains $10 + 9 \times lag$ variables. Finally, a last hyper-parameter is used when we label the observations with the event times from the gold standard. It is called *k* and controls the number of points that we label as part of the event. Since it is not used in both compared strategies, it is explained in the next section while we describe the two strategies.
