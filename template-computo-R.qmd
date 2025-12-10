@@ -10,11 +10,7 @@
 
 {{< include _04_Results.qmd >}}
 
-\newpage
-
 {{< include _05_Discussion.qmd >}}
-
-\newpage
 
 # References {.unnumbered}
 
