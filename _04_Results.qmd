@@ -1,12 +1,12 @@
 # Results {#sec-results}
 
-Various models are built and evaluated to find the best model for each strategy. Then, both strategies are compared to select the best one and have a resulting final model.
+In this section, we aim at comparing both the two classification strategies defined in @sec-classification-strategies and the models described in @sec-supervised-classification-models to select a final model which is best able to detect gait events from the raw sensor data.
 
 ## Tuning of hyper-parameters
 
-In order to choose the best model for each strategy, we tuned the hyper-parameter of each model for both strategies. Since we do not use the same metric to tune and evaluate models for each strategy, as we use the GWYI in the strategy E and accuracy in the strategy P, we cannot directly choose a strategy at this step. Therefore, we select one model per strategy and compare the two strategies later.
+Since we used two different performance metrics to evaluate the two strategies (the GWYI for the strategy E and accuracy for the strategy P, see @sec-performance-metrics), we first selected one best model per strategy before comparing the two strategies to choose a final model.
 
-We choose a set of values to test for each hyper-parameter of the feature space tuning (see @tbl-grid-fs). We recall that the hyper-parameters *spar* and *n_lag* are used in both strategies but the hyper-parameter *k* is used only in the strategy E to label events.
+@tbl-grid-fs summarizes the hyper-parameter values that we tested for the feature space tuning. Recall that we used two hyper-parameters for the feature space construction: the smoothing curve parameter *spar* and the number of kept times in the past *n_lag*. These two hyper-parameters are used in both strategies. Additionally, for the strategy E, we also used the hyper-parameter *k* to label time points surrounding the times identified by the mat as occurences of relevant gait events as possible occurences of these same events (see @sec-feature-space).
 
 ::: {#tbl-grid-fs tbl-pos="H"}
 
@@ -39,11 +39,11 @@ tibble::tibble(
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
-Feature space parameters tuning grid values.
+Chosen grids for the hyper-parameters used for feature space construction.
 
 :::
 
-For the strategy E, we also tune the weight classes used to address the class imbalance issue. For this matter, we fix the weight of the class *None* with the value 1, and we test different weights for the classes of interest (see @tbl-grid-class-weights). For the strategy P, as the class imbalance is less present, we only use the weights from the inverse class frequency method defined in @eq-inv-class-frequency.
+Next, for classification strategy E, we also tuned the class weights used to address the class imbalance issue. For this matter, we fixed the weight of the class *None* to $1$, and tested three different values for the classes corresponding to gait events of interest. These values are reported in @tbl-grid-class-weights. For classification strategy P, the class imbalance is less pronounced. Hence, as mentioned in @sec-class-imbalance, we used the inverse class frequency method which computes weights according to @eq-inv-class-frequency.
 
 ::: {#tbl-grid-class-weights tbl-pos="H"}
 
@@ -66,11 +66,11 @@ tibble::tibble(
   gt::fmt_markdown(columns = param)
 ```
 
-Strategy E: Class weight tuning grid values.
+Chosen grids for the weights of the classes of interest (occurences of gait events) in Strategy E.
 
 :::
 
-Finally, we build tuning grid values for every model hyper-parameters which are common to both strategies (see @tbl-grid-model).
+Finally, we build tuning grids for every model-specific hyper-parameters which are common to both strategies. @tbl-grid-model summarizes the grids used for tuning the models.
 
 ::: {#tbl-grid-model tbl-pos="H"}
 
@@ -187,11 +187,11 @@ tibble::tibble(
   gt::fmt_markdown(columns = param)
 ```
 
-Model hyper-parameter tuning grid values.
+Chosen grids for model-specific hyper-parameters.
 
 :::
 
-For each strategy and each model, we get the optimal parameters thanks to tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the Appendix for the detail of chosen parameters for each model). We then evaluate each model on the test set which was never seen before to find the best model for each strategy (see @tbl-res).
+For each strategy and each model, we get the optimal parameters after tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the Appendix for the list of optimal parameters for each model). We then evaluate each model on the test set. @tbl-res gives the performance metrics computed on the test set for both strategies.
 
 ::: {#tbl-res tbl-pos="H"}
 
@@ -233,17 +233,21 @@ Performance metrics on the test set for both strategies.
 
 :::
 
-We keep one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we select the Neural Network model to maximize the GWYI. For the strategy P, we select the Boosted Trees model to maximize accuracy. We can note that for the strategy P, three models (the random forest, the boosted trees and the neural network) had close results between 89.4% and 89.7%. However, since all models had really quick computing times to make predictions on the test set, this was not a criteria to choose one model over another one, so we could simply choose the model giving the highest score.
+[We keep one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we select the Neural Network model to maximize the GWYI. For the strategy P, we select the Boosted Trees model to maximize accuracy. We can note that for the strategy P, three models (the random forest, the boosted trees and the neural network) had close results between 89.4% and 89.7%. However, since all models had really quick computing times to make predictions on the test set, this was not a criteria to choose one model over another one, so we could simply choose the model giving the highest score.]{.mark}
 
-Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one, leading to a final model.
+::: {.aside}
+[AST] Looking at @tbl-res, I would argue that clearly in strategy E their is a single winner which is the Neural Network. However, in strategy P, the Boosted Trees and Neural Network have very close accuracy (89.7% vs 89.4%). I bet the difference is not statistically significant. Maybe we could do some statistical test to compare the two models using the 5 folds of the cross-validation? If we find that there is no significant difference, we could choose the Neural Network for strategy P as well, to have the same type of model for both strategies. What do you think?
+:::
 
-## Selecting a strategy
+Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one in its ability to detect gait events.
 
-To choose a final model, we need to determine the best strategy. In order to do so, we compare the predictions made on the test set by the two previously selected models with the real events given by the gold standard to see which model gives closer results. We still use the test set to evaluate the strategies.
+## Predicting phases or events?
 
-First, we shorten the time-series to retain the times where we want to detect points by keeping only the time range where the gold standard detected the four events perfectly. Indeed, at the start and the end of the session, this tool can miss contact points because the subject is not walking on the mat sensors. At the start of the session, we search for the first *Heel Strike* event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
+We now have two models to compare: the Neural Network from the strategy E predicting directly the occurences of the gait events of interest and the Boosted Trees from the strategy P predicting the gait phases instead. To choose one over the other, we will compare their predictions on the test set with the real events given by the gold standard. The latter is provided by the GAITRite© mat that the subjects walked on during the data collection sessions.
 
-In both strategies, the model does not detect only one point corresponding to the event but a window of points containing the event (see @fig-preds-both-strategies). This means that we need to build a procedure to get precise estimated event times from the model predictions. In the strategy P, when predicting sub-phases, the event corresponding to the sub-phase is theoretically located at the start of the sub-phase but we see that it is not always the case with our model's predictions. Hence we use the same process for both strategies to choose one point either in the windows detected with the strategy E or in the sub-phases predicted with the strategy P.
+As any measurement tool, this mat is not perfect and can miss some contact points at the start and the end of the walking session. Hence, we need to preprocess the time series before comparing the predicted events with the real ones. Specifically, we start by shortening the time series to keep only the time window where the gold standard detected all four events perfectly. At the start of the session, we search for the first *Heel Strike* event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
+
+Next, no matter the classification strategy (phases v.s. events), we need to extract estimated event times from the model predictions to compare them with the true occurences of gait events of interest given by the gold standard. In effect, the model does not detect only one point matching the event of interest but a window of points containing the event as shown by @fig-preds-both-strategies. In the strategy P (phase predictions), the event corresponding to the beginning of a gait phase should be in principle the initial time point of that phase. But we observed that this is not the case with our model predictions. In the strategy E (event predictions), we could reasonably think instead that the exact occurence of the event of interest is in the center of the predicted time window.
 
 ::: {#fig-preds-both-strategies layout="[45, -10, 45]" fig-pos="H"}
 
@@ -251,27 +255,37 @@ In both strategies, the model does not detect only one point corresponding to th
 
 ![Strategy P: Predictions made by the boosted trees.](images/preds_phases_and_real_events.png){#fig-preds-phases width=270}
 
-Predictions from both strategies. The bigger and darker points represent the real time of events given by the GAITRite© gold standard.
+Predictions from both classification strategies. The bigger and darker points represent the true occurences of gait events of interest as provided by the GAITRite© mat (gold standard).
 :::
 
-In each window or phase detected, the following process is applied to keep one point representing the event. We first need to identify each of them correctly, using the two following parameter:
+In any case, to provide a fair assessment of both models' performance, we devised a common procedure to get a single estimated event time from the predicted time window (Strategy E) or phase (Strategy P). Specifically, we first make sure to correctly identify predicted time windows or phases, using the two following rules:
 
-- A threshold to firstly select only the observations with a high probability of being in the class: $p > 0.4$.
-- A time to know when to distinguish two predicted windows or phases: if the first point of the window $i$ is at more than $t = 40 ms$ from the last point of the window $i-1$ we consider the windows distinct. It enables us to define unique windows with points that are not necessarily consecutive when only one event should be detected in this time range.
+1. A threshold to first select only the observations with a high probability of class membership: $p > 0.4$.
+2. A time gap between two predicted windows or phases: $t = 40 ms$.
+ 
+These two rules applied sequentially allow us to define unique non-overlapping predicted windows or phases
 
-Then, in each of these clearly separated windows or phases, we keep the point having the highest probability of being in this class according to the model. This point is the time of the estimated event. The last step is to compare these estimated events with the ones given by the gold standard to see which of the strategy gives better result and select a final strategy.
+[that with points that are not necessarily consecutive when only one event should be detected in this time range.]{.mark}
 
-The first point of comparison is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but it does not allow us to tell them apart. The second item that can be compared is the time at which the events are happening. We plot the mean time difference between real and predicted events for each session in the test set (see @fig-boxplot-comparison).
+::: {.aside}
+[AST] I am not sure to understand this last sentence. Could you rephrase it? Also I think it would be important to make models aware of the order of the events during training. What do you think?
+:::
 
-![Mean time difference between real and predicted events for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=600}
+Then, in each of these clearly separated windows or phases, we define the estimated occurence of the gait event of interest as the point that has the highest probability of class membership according to the prediction model.
 
-In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the real time of the event. This could mean that for these events, it would give better results to take one of the first points of the detected sub-phase instead of the point with the model highest probability. Since we do not have theoretical explanation of this phenomena, we can not justify the use of different procedure for either *Heel Strike* or *Toe-Off* events. On the other hand, in the strategy E, all of the event times are estimated near the real ones with no distinction between classes. For each type of event, the estimated time median is at approximately 50 ms before the real event, with a few outliers. Overall, the results given by the event detection are closer to the times given by the gold standard so we retain the strategy E. 
+The last step is to compare these estimated events with the ones given by the gold standard to decide which of the two strategies leads to the best results and choose a definitive model. The first and simplest criterion that we can think of is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but we still cannot tell them apart. The second criterion that can be compared is the time difference between the estimated and true occurences of gait events of interest. To that effect, @fig-boxplot-comparison shows the distributions of such time differences on the test set for each gait event of interest and for each strategy.
 
-\newpage
+![Mean time difference between true and predicted occurences of gait events of interest for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=600}
+
+::: {.aside}
+[AST] What is the optimal value of the parameter $k$? It seems to be $k = 0$ according to the table in the appendix, which means you induce from the start a bias in the predictions of about 20 ms. Have you tried $k = 0$?
+:::
+
+In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the actual time of the event. This could mean that, for these events, it would give better results to take one of the first points of the predicted phase instead of the point with the highest class membership probability. However, we do not have a sound theoretical explanation of this phenomenon. Hence, we cannot currently justify to use a different procedure for estimating the occurence of heel strike events compared to toe-off events. On the other hand, in the strategy E, all of the event times are estimated near the actual ones regardless of the type of event. The estimated time median is at approximately 50 ms before the actual event, with a few outliers. Overall, @fig-boxplot-comparison suggests that the model associated with the strategy E is better at estimating the occurences of gait events of interest.
 
 ## Detailed performance of the selected model
 
-The final selected model is the neural network from the strategy E predicting directly the event times. We give a more in-depth evaluation of the final model in this part. We evaluate this model on the test set for the three metrics adapted to this strategy: the Macro-Average Sensitivity and Specificity and the GWYI (see @tbl-final-eval). We also perform a deeper comparison of the estimated event times by the model with the real ones given by the gold standard.
+The final selected model is the neural network from the strategy E predicting directly the event times. In this section, we give a more in-depth evaluation of this model. @tbl-final-eval summarizes the values of the three performance metrics adapted to this strategy: the macro-average sensitivity and specificity and the generalized weighted Youden index.
 
 ::: {#tbl-final-eval tbl-pos="H"}
 
@@ -294,9 +308,21 @@ Performance metrics of the selected Neural Network on the test set.
 
 :::
 
-For a complete comparison of our model with the gold standard, we use spatio-temporal parameters that can be computed from the four events happening during a walking cycle: the number of cycles in a session, the cycle duration and the percentage of stance phase. We compute the mean value for these parameters on each session from the test set. We differentiate the results for each foot by computing the gait cycles starting with the right and the left foot, thus we have 70 observations for this comparison (1 per session and foot in the test set). 
+[We also perform a deeper comparison of the estimated event times by the model with the real ones given by the gold standard.]{.mark}
 
-For the number of cycles in each session, we find the exact same number of cycles for our model and the gold standard, which is not surprising since we previously shown that the model detected the correct number of each event in every sessions. For the mean cycle duration and the mean percentage of stance phase, we use Bland-Altman plots [@bland_altman] to compare the the results (see @fig-bland-altman).
+::: {.aside}
+[AST] Where do you do that?
+:::
+
+For a thorough comparison of our model with the gold standard, we use state-of-the-art spatio-temporal gait parameters that can be computed from the four gait events of the walking cycle that we are now able to estimate. 
+
+::: {.aside}
+[AST] A reference for these parameters would be good here.
+:::
+
+Specifically, we focused on (i) the number of cycles in a session, (ii) the cycle duration and (iii) the percentage of the stance phase. We computed the mean value of these parameters on each session from the test set by foot (hence 70 observations, 1 per session and foot in the test set).
+
+For the number of cycles in each session, we found the exact same number of cycles using our model and the gold standard, which is not surprising since we previously showed that the model detected the correct number of each event in every session. For the mean cycle duration and the mean percentage of stance phase, @fig-bland-altman presents the results in the form of Bland-Altman plots [@bland_altman].
 
 ::: {#fig-bland-altman layout="[48, -4, 48]" fig-pos="H"}
 
@@ -304,7 +330,19 @@ For the number of cycles in each session, we find the exact same number of cycle
 
 ![Comparison of the mean stance percentage (%).](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
 
-Bland-Altman plots to compare our model with the gold standard on spatio-temporal parameters.
+Bland-Altman plots to compare our model with the gold standard on classical spatio-temporal gait parameters.
 :::
 
-For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results than the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between minus 26 ms and 21 ms, represented by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems low enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between minus 8.50% and 6.5% and we know that a stance phase generally lasts about 60% of the gait cycle. Once again our model gives coherent results that are close to the parameters given by the reference method.
+::: {.aside}
+[AST] Is the figure about right foot ? Left foot ? Both ? Please specify in the caption.
+:::
+
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results to the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between $-26$ ms and $+21$ ms, as shown by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems small enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between $-8.50\%$ and $+6.5\%$ while 
+
+[it is known that the stance phase generally occupies about $60\%$ of the gait cycle.]{.mark}
+
+::: {.aside}
+[AST] A reference for this statement would be good.
+:::
+
+Hence, once again, our model gives coherent results that are close to the parameters given by the reference method.

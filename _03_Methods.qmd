@@ -39,7 +39,7 @@ The definition of these phases matches a typical gait cycle starting when the ri
 
 @fig-phases-timeserie shows the gait phases overlaid on a QTS. Each gait phase is mapped to a suitable color. We can see that some phases are larger than others: the *pre-stance* and *pre-swing* phases are indeed shorter than the *stance* and *swing* phases. However, class imbalance is not as severe as in the first strategy.
 
-## Supervised classification models
+## Supervised classification models {#sec-supervised-classification-models}
 
 In addition to the two classification strategies presented in @sec-classification-strategies, the literature presents a wide variety of machine learning models that can be used for supervised classification. In this section, we detail the different models that we selected to compare for our task of gait event detection and phase prediction. The choice of these models was made among the models available in the [{tidymodels}](https://www.tidymodels.org) framework in R [@tidymodels] in order to guarantee a consistent and identical implementation for their training and evaluation.
 
@@ -101,7 +101,7 @@ with $t_k$ the ground truth and $y_k$ the classification probability.
 
 These models are complex and rely on a efficient algorithm for the parameter update and an adapted activation function, as well as possible utilization of batch normalization, regularization or dropout to find a model with a good complexity for the data. Tuning is done to find the best hyper-parameters such as the number of layers and nodes or the learning rate.
 
-## Dealing with class imbalance
+## Dealing with class imbalance {#sec-class-imbalance}
 
 Classification strategy E leads to a strong class imbalance as the *None* class contains most of the observations. Even strategy P has some imbalance between the classes, although less severe. This is an important issue in machine learning because, in such situations, models learn quite well to predict the majority class which, in our application, is not of great interest, but fail to correctly predict the minority classes which are the ones we want to detect. In addition, performance metrics such as accuracy are not adapted to evaluate models in this context because a model predicting only the majority class would achieve a high accuracy while being useless.
 
@@ -146,6 +146,10 @@ In this strategy, we aim at predicting occurences of gait events directly. As a 
 , which represents a case of severe class imbalance. Accuracy is not adapted in this case because a model which always predicts the majority class will be deemed a *good* model in the sense of accuracy, while completely missing the classes of interest. We therefore need to use other metrics that are adapted to this situation.
 
 An important tool for designing performance metrics of classification methods is the *confusion matrix* $C$ which is a $K \times K$ matrix for a $K$-class classification problem such that the element $c_{i,j}$ represents the number of observations from the class $i$ that have been predicted in the class $j$. This matrix summarizes the performance of a classification model by showing how many observations have been correctly or incorrectly classified in each class. In a binary classification problem, the matrix reports the number of true positives (TP), false positives (FP), true negatives (TN) and false negatives (FN). Two of the metrics that can be calculated from this matrix are known as *sensitivity* and *specificity*. The sensitivity Se = TP / (TP + FN) measures the proportion of accurate predictions for the positive class among all actual positive instances. Hence, low sensitivity indicates that the model is missing many instances of the positive class. Conversely, the specificity Sp = TN / (TN + FP) measures the proportion of accurate predictions for the negative class among all actual negative instances. In scenarios with class imbalance, sensitivity is particularly crucial as it reveals how effectively the model identifies instances of the minority class, which is often designated as the positive class.
+
+::: {.aside}
+[AST] Why not use precision/recall through the F1 score?
+:::
 
 In a multiclass classification problem, we can extend these metrics to use them with more than one positive class. For detecting gait events of interest, we have four classes of interest which correspond to the minority classes compared to time points at which no relevent gait event occurs. We therefore define a $5 \times 5$ confusion matrix as exhibited in @fig-confusion-matrix. The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,\cdot}$ represents the number of observations from the class $i$, while $c_{\cdot,j}$ represents the number of observations that the model predicted to be in the class $j$.
 
