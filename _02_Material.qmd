@@ -4,10 +4,6 @@ This section is dedicated to describing the data that we used for segmenting gai
 
 ## Unit quaternions {#sec-quaternions}
 
-::: {.aside}
-[AST] We should cite a book or a review paper about quaternions here.
-:::
-
 Unit quaternions can be used to represent the 3D rotation of an object over time [@hamilton1844;@voight2021quaternion]. This representation has several advantages such as being the most compressed representation of rotation and avoiding the gimbal lock issue. We therefore chose to measure the sensor orientation as a unit quaternion.
 
 Quaternions are four-dimensional vectors denoted by $\mathbf{q} = \left( q_w, q_x, q_y, q_z \right)$, but can also be viewed as hypercomplex numbers of rank $4$. Unit quaternions have a norm of $1$ and encode a 3D rotation with rotation angle $\theta \in [0, 2\pi]$ and rotation axis $\mathbf{u} = (u_x, u_y, u_z) \in S^2$, where $S^2$ is the 2-sphere, using the following formula:
@@ -52,13 +48,7 @@ We used an IMU sensor to record the hip orientation over time. The IMU was compo
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
-We asked the participants to walk on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers,
-
-[allowing a good synchronization between devices.]{.mark}
-
-::: {.aside}
-[AST] We should cite Thibault's paper about synchronization here.
-:::
+We asked the participants to walk on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability].
 
 We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024.
 
@@ -111,15 +101,7 @@ Sensor data
 
 Sensor data preprocessing 
 
-: A centring step is applied on the quaternion time series to center quaternions around their mean. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the 
-
-[Fréchet mean associated to the geodesic distance]{.mark}
-
-::: {.aside}
-[AST] We should cite a paper about how to compute the Fréchet mean on the unit quaternion manifold here.
-:::
-
-$d_g$ (see @eq-geodesic-distance) to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
+: A centring step is applied on the quaternion time series to center quaternions around their mean. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) [@moakher02,@manton04] to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
 
 $$
 \mathbf{q}_j^{(m)} = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!].
@@ -135,6 +117,8 @@ $$ {#eq-centring-qts}
 
 ::: {.aside}
 [AST] We should detail the parameters used for the cubic splines here for the sake of reproducibility.
+
+[MSI] We used the stats::smooth.spline function, I don't understand what parameters should be detailed. Can you do it since you implemented the smoothing step?
 :::
 
 Pressure mat data
@@ -198,24 +182,11 @@ where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the po
 
 Walking speed
 
-: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included in the feature space this information.
+: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite© mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time-series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
 
-[Thus this variable was also added to the feature space by getting it from the GAITRite© mat output.]{.mark}
-
-::: {.aside}
-[AST] We should explain how we deal with the fact that walking speed is not available at prediction time. Maybe add the figure you showed at your master's discussion about predicting walking speed from the mean angular velocity?
-
-Also it could be worthwhile to compute an instantaneous walking speed from the QTS data only.
-:::
 
 Hyper-parameters
 
-: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* that represents the amount of smoothing that we seek to achieve when fitting cubic splines to the original QTS. Since time derivatives are used to compute some predictors, it is indeed useful to smooth the QTS sufficiently so the derivative values remain stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a given time point $t_j$, we include features computed at $t_j$ as well as the same features computed at time points $t_{j-1}, \dots, t_{j-\mathrm{lag}}$. The size of the feature space therefore depends on the *lag* parameter as it contains
-
-[$10 + 9 \times \mathrm{lag}$ variables.]{.mark}
-
-::: {.aside}
-[AST] We should detail here how we get 10 + 9 * lag variables. I am not clear about the 10 in particular. One is the label, one is walking speed, but the others?
-:::
+: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* that represents the amount of smoothing that we seek to achieve when fitting cubic splines to the original QTS. Since time derivatives are used to compute some predictors, it is indeed useful to smooth the QTS sufficiently so the derivative values remain stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a given time point $t_j$, we include features computed at $t_j$ as well as the same features computed at time points $t_{j-1}, \dots, t_{j-\mathrm{lag}}$. The size of the feature space therefore depends on the *lag* parameter as it contains $10 + 9 \times \mathrm{lag}$ predictors. The ten first predictors are the three-component angular speed vector, the three-component angular acceleration vector, the three angles Roll, Pitch and Yaw and the walking speed. We then add nine predictors per *lag*: the angular speed and acceleration and the Roll-Pitch-Yaw angles from the previous time.
 
 Finally, a last hyper-parameter is used when we label the observations with the gait event times from the gold standard. It is called *k* and controls the number of points around a gait event that we label as part of the event. In @sec-classification-strategies, we elicit two strategies for building segmentation models, one of which does not use this parameter. Therefore, we differ other details about this parameter in the dedicated section.

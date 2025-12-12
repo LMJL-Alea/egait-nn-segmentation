@@ -14,10 +14,32 @@ Strategy E: Predicting gait [E]{.underline}vents
 - *Right Toe Off*,
 - *None* (all other times not corresponding to a certain event).
 
-This strategy aims at directly predicting the occurence of gait events of interest. However, it inherits by construction of a severe class imbalance  effect, with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones. It is clearly represented on @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the QTS recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
+This strategy aims at directly predicting the occurrence of gait events of interest. However, it inherits by construction of a severe class imbalance  effect, with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones (see @tbl-class-imbalance). It is clearly represented on @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the QTS recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
 
-::: {.aside}
-[AST] A table showing the counts of each class could help making the point more quantitative.
+::: {#tbl-class-imbalance tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  class = c("Right Heel Strike", "Left Toe Off", "Left Heel Strike", "Right Toe Off", "None"),
+  nb_obs = c("973", "1004", "994", "982", "158401"),
+  prop = c("0.60%", "0.62%", "0.61%", "0.60%", "97.57%")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    class = "Class",
+    nb_obs = "Number of observations",
+    prop = "Proportion"
+  ) |>
+  gt::cols_align(align = "center") |> 
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = class)
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Strategy E: Count and proportion of observations in each class.
+
 :::
 
 ![Gait event occurences overlaid on a unit QTS.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350}
@@ -109,15 +131,7 @@ A lot of sampling algorithms exist to mitigate this issue such as random oversam
 
 To tell the model to pay more attention to the patterns in the minority classes, an effective way is to put a larger weight on the observations belonging to such classes compared. More precisely, the weight given to each observation specifies how much this observation influences the model's estimation. In order for the model to be biased towards observations deemed more important for the application at hand (minority classes in our case), the weights of the observations are integrated into the cost function. Weights naturally impact the cost of misclassification in the sense that misclassifying more important observations should cost more, encouraging the model to avoid these types of mistakes [@hashemi2018].
 
-When the classes are not too imbalanced, such as in Strategy P (phase prediction), we can use the
-
-[inverse class frequency]{.mark}
-
-::: {.aside}
-[AST] A reference to a paper using this method could be useful.
-:::
-
-weights where the weight on the class $k$ is given by:
+When the classes are not too imbalanced, such as in Strategy P (phase prediction), we can use the inverse class frequency weights [@huang2016learning] where the weight on the class $k$ is given by:
 
 $$
 \omega_k = \frac{n}{n_\mathrm{classes} \hspace{1mm} n_k}
@@ -129,29 +143,23 @@ with $n$ the total number of observations, $n_\mathrm{classes}$ the number of cl
 
 To tune and evaluate the models, we need to use appropriate metrics according to the classification strategy and the amount of class imbalance.
 
-### Metrics for Strategy P (phase prediction)
+### Metrics for Strategy P (Phase prediction)
 
 In this strategy, we aim at predicting phases. All classes are therefore equally important and they are not severely unbalanced. Consequently, we use the accuracy metric to tune and evaluate models under this paradigm. It is the most widely used metric in machine learning and is defined as the number of correct predictions divided by the total number of predictions.
 
-### Metrics for Strategy E (event prediction)
+### Metrics for Strategy E (Event prediction)
 
-In this strategy, we aim at predicting occurences of gait events directly. As a result, four of the five classes are the classes of interest while the majority class is not relevant. Furthermore, the majority class contains
-
-[XXX% of the observations]{.mark}
-
-::: {.aside}
-[AST] A precise percentage could help making the point more quantitative.
-:::
-
-, which represents a case of severe class imbalance. Accuracy is not adapted in this case because a model which always predicts the majority class will be deemed a *good* model in the sense of accuracy, while completely missing the classes of interest. We therefore need to use other metrics that are adapted to this situation.
+In this strategy, we aim at predicting occurences of gait events directly. As a result, four of the five classes are the classes of interest while the majority class is not relevant. Furthermore, the majority class contains the large majority of observations (for instance, $97.57\%$ of the observations for $k=0$ and $92.70\%$ of the observations for $k=1$), which represents a case of severe class imbalance. Accuracy is not adapted in this case because a model which always predicts the majority class will be deemed a *good* model in the sense of accuracy, while completely missing the classes of interest. We therefore need to use other metrics that are adapted to this situation.
 
 An important tool for designing performance metrics of classification methods is the *confusion matrix* $C$ which is a $K \times K$ matrix for a $K$-class classification problem such that the element $c_{i,j}$ represents the number of observations from the class $i$ that have been predicted in the class $j$. This matrix summarizes the performance of a classification model by showing how many observations have been correctly or incorrectly classified in each class. In a binary classification problem, the matrix reports the number of true positives (TP), false positives (FP), true negatives (TN) and false negatives (FN). Two of the metrics that can be calculated from this matrix are known as *sensitivity* and *specificity*. The sensitivity Se = TP / (TP + FN) measures the proportion of accurate predictions for the positive class among all actual positive instances. Hence, low sensitivity indicates that the model is missing many instances of the positive class. Conversely, the specificity Sp = TN / (TN + FP) measures the proportion of accurate predictions for the negative class among all actual negative instances. In scenarios with class imbalance, sensitivity is particularly crucial as it reveals how effectively the model identifies instances of the minority class, which is often designated as the positive class.
 
 ::: {.aside}
 [AST] Why not use precision/recall through the F1 score?
+
+[MSI] recall = sensitivity; precision is used when the cost of a False Positive is high but in our case we don't mind classifying points as part of classes of interest even if they belong to the None class. We prefer to put too many observations in the classes of interest and then select high probability points within them.
 :::
 
-In a multiclass classification problem, we can extend these metrics to use them with more than one positive class. For detecting gait events of interest, we have four classes of interest which correspond to the minority classes compared to time points at which no relevent gait event occurs. We therefore define a $5 \times 5$ confusion matrix as exhibited in @fig-confusion-matrix. The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,\cdot}$ represents the number of observations from the class $i$, while $c_{\cdot,j}$ represents the number of observations that the model predicted to be in the class $j$.
+In a multiclass classification problem, we can extend these metrics to use them with more than one positive class. For detecting gait events of interest, we have four classes of interest which correspond to the minority classes compared to time points at which no relevant gait event occurs. We therefore define a $5 \times 5$ confusion matrix as exhibited in @fig-confusion-matrix. The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,\cdot}$ represents the number of observations from the class $i$, while $c_{\cdot,j}$ represents the number of observations that the model predicted to be in the class $j$.
 
 ![Confusion matrix for five classes including the *None* one represented by the letter N and four classes of interest named P1 to P4.](images/confusion-matrix.png){#fig-confusion-matrix width=300 pos="H"}
 

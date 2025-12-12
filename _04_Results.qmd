@@ -237,6 +237,8 @@ Performance metrics on the test set for both strategies.
 
 ::: {.aside}
 [AST] Looking at @tbl-res, I would argue that clearly in strategy E their is a single winner which is the Neural Network. However, in strategy P, the Boosted Trees and Neural Network have very close accuracy (89.7% vs 89.4%). I bet the difference is not statistically significant. Maybe we could do some statistical test to compare the two models using the 5 folds of the cross-validation? If we find that there is no significant difference, we could choose the Neural Network for strategy P as well, to have the same type of model for both strategies. What do you think?
+
+[MSI] To be sure of this choice I actually tested all three models on the test set by comparing them with the GAITRite mat (comparing the number of event detected and the event times predicted) and both the other models (Random Forest and NN) were missing a few events over the test set. I did not know if it was interesting to put in the paper, especially since I explain this procedure later on when we select a strategy.
 :::
 
 Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one in its ability to detect gait events.
@@ -263,15 +265,7 @@ In any case, to provide a fair assessment of both models' performance, we devise
 1. A threshold to first select only the observations with a high probability of class membership: $p > 0.4$.
 2. A time gap between two predicted windows or phases: $t = 40 ms$.
  
-These two rules applied sequentially allow us to define unique non-overlapping predicted windows or phases
-
-[that with points that are not necessarily consecutive when only one event should be detected in this time range.]{.mark}
-
-::: {.aside}
-[AST] I am not sure to understand this last sentence. Could you rephrase it? Also I think it would be important to make models aware of the order of the events during training. What do you think?
-:::
-
-Then, in each of these clearly separated windows or phases, we define the estimated occurence of the gait event of interest as the point that has the highest probability of class membership according to the prediction model.
+These two rules applied sequentially allow us to define unique non-overlapping predicted windows or phases. They also allow us to have windows containing points that are not necessarily consecutive, as we need at least $40 ms$ between observations to consider them in distinct windows. Then, in each of these clearly separated windows or phases, we define the estimated occurrence of the gait event of interest as the point that has the highest probability of class membership according to the prediction model.
 
 The last step is to compare these estimated events with the ones given by the gold standard to decide which of the two strategies leads to the best results and choose a definitive model. The first and simplest criterion that we can think of is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but we still cannot tell them apart. The second criterion that can be compared is the time difference between the estimated and true occurences of gait events of interest. To that effect, @fig-boxplot-comparison shows the distributions of such time differences on the test set for each gait event of interest and for each strategy.
 
@@ -279,9 +273,11 @@ The last step is to compare these estimated events with the ones given by the go
 
 ::: {.aside}
 [AST] What is the optimal value of the parameter $k$? It seems to be $k = 0$ according to the table in the appendix, which means you induce from the start a bias in the predictions of about 20 ms. Have you tried $k = 0$?
+
+[MSI] The optimal $k$ is 1, I did not test $k=0$ because I wanted to somewhat reduce the class imbalance with the use of this parameter.
 :::
 
-In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the actual time of the event. This could mean that, for these events, it would give better results to take one of the first points of the predicted phase instead of the point with the highest class membership probability. However, we do not have a sound theoretical explanation of this phenomenon. Hence, we cannot currently justify to use a different procedure for estimating the occurence of heel strike events compared to toe-off events. On the other hand, in the strategy E, all of the event times are estimated near the actual ones regardless of the type of event. The estimated time median is at approximately 50 ms before the actual event, with a few outliers. Overall, @fig-boxplot-comparison suggests that the model associated with the strategy E is better at estimating the occurences of gait events of interest.
+In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the actual time of the event. This could mean that, for these events, it would give better results to take one of the first points of the predicted phase instead of the point with the highest class membership probability. However, we do not have a sound theoretical explanation of this phenomenon. Hence, we cannot currently justify to use a different procedure for estimating the occurence of heel strike events compared to toe-off events. On the other hand, in the strategy E, all of the event times are estimated near the actual ones regardless of the type of event. The estimated time median is at approximately 50 ms before the actual event, with a few outliers. Overall, @fig-boxplot-comparison suggests that the model associated with the strategy E is better at estimating the occurrences of gait events of interest.
 
 ## Detailed performance of the selected model
 
@@ -308,17 +304,8 @@ Performance metrics of the selected Neural Network on the test set.
 
 :::
 
-[We also perform a deeper comparison of the estimated event times by the model with the real ones given by the gold standard.]{.mark}
 
-::: {.aside}
-[AST] Where do you do that?
-:::
-
-For a thorough comparison of our model with the gold standard, we use state-of-the-art spatio-temporal gait parameters that can be computed from the four gait events of the walking cycle that we are now able to estimate. 
-
-::: {.aside}
-[AST] A reference for these parameters would be good here.
-:::
+For a thorough comparison of our model with the gold standard, we use state-of-the-art spatio-temporal gait parameters [@hollman2011normative] that can be computed from the four gait events of the walking cycle that we are now able to estimate. 
 
 Specifically, we focused on (i) the number of cycles in a session, (ii) the cycle duration and (iii) the percentage of the stance phase. We computed the mean value of these parameters on each session from the test set by foot (hence 70 observations, 1 per session and foot in the test set).
 
@@ -330,19 +317,10 @@ For the number of cycles in each session, we found the exact same number of cycl
 
 ![Comparison of the mean stance percentage (%).](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
 
-Bland-Altman plots to compare our model with the gold standard on classical spatio-temporal gait parameters.
+Bland-Altman plots to compare our model with the gold standard on classical spatio-temporal gait parameters, for both feet on the test set.
 :::
 
-::: {.aside}
-[AST] Is the figure about right foot ? Left foot ? Both ? Please specify in the caption.
-:::
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results to the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between $-26$ ms and $+21$ ms, as shown by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems small enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between $-8.50\%$ and $+6.5\%$ while it is known that the stance phase generally occupies about $60\%$ of the gait cycle [@LARIBI202083].
 
-For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results to the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between $-26$ ms and $+21$ ms, as shown by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems small enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between $-8.50\%$ and $+6.5\%$ while 
-
-[it is known that the stance phase generally occupies about $60\%$ of the gait cycle.]{.mark}
-
-::: {.aside}
-[AST] A reference for this statement would be good.
-:::
 
 Hence, once again, our model gives coherent results that are close to the parameters given by the reference method.
