@@ -15,3 +15,4 @@ template-computo-R.pdf
 _extensions/
 renv/
 logo_notext_white.png
+**/*.quarto_ipynb

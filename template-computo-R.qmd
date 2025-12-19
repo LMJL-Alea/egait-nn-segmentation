@@ -1,6 +1,4 @@
-\newpage
 \tableofcontents
-\newpage
 
 {{< include _01_Introduction.qmd >}}
 
