@@ -8,9 +8,11 @@
 *_cache/
 /cache/
 *_files/
-template-computo-R.html
+*.html
 logo_text_white.pdf
 template-computo-R.pdf
 /.quarto/
 _extensions/
 renv/
+logo_notext_white.png
+**/*.quarto_ipynb

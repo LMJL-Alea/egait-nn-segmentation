@@ -1,0 +1,314 @@
+# Results {#sec-results}
+
+In this section, we aim at comparing both the two classification strategies defined in @sec-classification-strategies and the models described in @sec-supervised-classification-models to select a final model which is best able to detect gait events from the raw sensor data.
+
+## Tuning of hyper-parameters
+
+Since we used two different performance metrics to evaluate the two strategies (the GWYI for the strategy E and accuracy for the strategy P, see @sec-performance-metrics), we first selected one best model per strategy before comparing the two strategies to choose a final model.
+
+@tbl-grid-fs summarizes the hyper-parameter values that we tested for the feature space tuning. Recall that we used two hyper-parameters for the feature space construction: the smoothing curve parameter *spar* and the number of kept times in the past *n_lag*. These two hyper-parameters are used in both strategies. Additionally, for the strategy E, we also used the hyper-parameter *k* to label time points surrounding the times identified by the mat as occurences of relevant gait events as possible occurences of these same events (see @sec-feature-space).
+
+::: {#tbl-grid-fs tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  param = c("spar", "n_lag", "k"),
+  description = c(
+    "Smoothing curve parameter",
+    "Kept times in the past",
+    "Number of labeled points"
+  ),
+  strategy = c("Both", "Both", "Strategy E"),
+  values = c("0.3, 0.4, 0.5, 0.6, 0.7", "1, 2, 3, 4, 5", "1, 2, 3")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    param = "Parameter",
+    strategy = "Strategy",
+    description = "Description",
+    values = "Tuning Grid"
+  ) |>
+  gt::cols_align(
+    align = "left",
+    columns = values
+  ) |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = param)
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Chosen grids for the hyper-parameters used for feature space construction.
+
+:::
+
+Next, for classification strategy E, we also tuned the class weights used to address the class imbalance issue. For this matter, we fixed the weight of the class *None* to $1$, and tested three different values for the classes corresponding to gait events of interest. These values are reported in @tbl-grid-class-weights. For classification strategy P, the class imbalance is less pronounced. Hence, as mentioned in @sec-class-imbalance, we used the inverse class frequency method which computes weights according to @eq-inv-class-frequency.
+
+::: {#tbl-grid-class-weights tbl-pos="H"}
+
+```{r}
+is_empty <- function(x) {
+  return(x == "")
+}
+
+options(gt.html_tag_check = FALSE)
+tibble::tibble(
+  param = c("Weight on class *None*", "Weight on event classes"),
+  values = c("1", "40, 60, 80")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    param = "Parameter",
+    values = "Tuning Grid"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |>
+  gt::fmt_markdown(columns = param)
+```
+
+Chosen grids for the weights of the classes of interest (occurences of gait events) in Strategy E.
+
+:::
+
+Finally, we build tuning grids for every model-specific hyper-parameters which are common to both strategies. @tbl-grid-model summarizes the grids used for tuning the models.
+
+::: {#tbl-grid-model tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  model = c(
+    "Multinomial Regression",
+    "Multinomial Regression",
+    "Decision Tree",
+    "Decision Tree",
+    "Bagged Trees",
+    "Bagged Trees",
+    "Random Forest",
+    "Random Forest",
+    "Boosted Trees",
+    "Boosted Trees",
+    "Boosted Trees",
+    "Boosted Trees",
+    "KNN",
+    "KNN",
+    "Neural Network",
+    "Neural Network",
+    "Neural Network"
+  ),
+  param = c(
+    "`penalty`",
+    "`mixture`",
+    "`tree_depth`",
+    "`min_n`",
+    "`tree_depth`",
+    "`min_n`",
+    "`trees`",
+    "`min_n`",
+    "`trees`",
+    "`min_n`",
+    "`tree_depth`",
+    "`learn_rate`",
+    "`neighbors`",
+    "`dist_power`",
+    "`hidden_units`",
+    "`learn_rate`",
+    "`dropout`"
+  ),
+  description = c(
+    "Regularization parameter",
+    "Regularization type (Lasso, Ridge, Elastic Net)",
+    "Tree depth",
+    "Minimal number of observations before splitting",
+    "Tree depth",
+    "Minimal number of observations before splitting",
+    "Number of trees",
+    "Minimal number of observations before splitting",
+    "Number of trees",
+    "Minimal number of observations before splitting",
+    "Tree depth",
+    "Learning rate",
+    "Number of nearest neighbors",
+    "Minkowski distance order",
+    "Hidden layers and units",
+    "Learning rate",
+    "Rate of randomly deactivated nodes"
+  ),
+  values = c(
+    "0.01, 0.001, 0.0001",
+    "0, 0.25, 0.5, 0.75, 1",
+    "1:15",
+    "2:40",
+    "1:15",
+    "2:40",
+    "100, 300, 500, 700, 900",
+    "2:40",
+    "400, 600, 800, 1000",
+    "20, 40",
+    "5, 8, 12",
+    "0.01",
+    "3, 5, 10, 20",
+    "1, 2",
+    "hidden layers: 2:5; nodes: 100, 500",
+    "0.01, 0.001",
+    "0.1, 0.3"
+  )
+) |>
+  dplyr::group_by(model) |>
+  dplyr::mutate(model = ifelse(dplyr::row_number() == 1, model, "")) |>
+  dplyr::ungroup() |>
+  gt::gt() |>
+  gt::tab_style(
+    style = list(
+      gt::cell_borders(
+        sides = c("top", "bottom"),
+        weight = gt::px(0)
+      )
+    ),
+    locations = list(
+      gt::cells_body(
+        columns = model,
+        rows = is_empty(model)
+      )
+    )
+  ) |>
+  gt::cols_label(
+    model = "Model",
+    param = "Parameter",
+    description = "Description",
+    values = "Tuning Grid"
+  ) |>
+  gt::cols_width(
+    model ~ "25%",
+    param ~ "17%",
+    description ~ "38%",
+    values ~ "25%"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |>
+  gt::fmt_markdown(columns = param)
+```
+
+Chosen grids for model-specific hyper-parameters.
+
+:::
+
+For each strategy and each model, we get the optimal parameters after tuning (see @tbl-tuning-res-events and @tbl-tuning-res-phases in the Appendix for the list of optimal parameters for each model). We then evaluate each model on the test set. @tbl-res gives the performance metrics computed on the test set for both strategies.
+
+::: {#tbl-res tbl-pos="H"}
+
+```{r}
+data.frame(
+  model = c(
+    "Multinomial Regression",
+    "Decision Tree",
+    "Bagged Trees",
+    "Random Forest",
+    "Boosted Trees",
+    "KNN",
+    "Neural Network"
+  ),
+  youden = c("67.6%", "60.0%", "70.3%", "70.5%", "83.0%", "24.0%", "88.7%"),
+  accuracy = c("82.7%", "73.9%", "74.9%", "89.4%", "89.7%", "88.0%", "89.4%")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    model = "Model",
+    youden = "Strategy E: GWYI",
+    accuracy = "Strategy P: accuracy"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161") |>
+  gt::tab_style(
+    style = gt::cell_fill(color = 'lightgreen'),
+    locations = gt::cells_body(columns = c(youden), rows = 7)
+  ) |>
+  gt::tab_style(
+    style = gt::cell_fill(color = 'lightgreen'),
+    locations = gt::cells_body(columns = c(accuracy), rows = 5)
+  ) |>
+  gt::cols_width(
+    everything() ~ px(200)
+  )
+```
+
+Performance metrics on the test set for both strategies.
+
+:::
+
+We kept one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we selected the neural network model which maximizes the GWYI without doubts compared to all other models. For the strategy P, four models have accuracy above 88% with very similar scores. One would be tempted to choose the neural network to have the same type of model for both strategies. However, after testing all four models on the test set by comparing them with the GAITRite mat data (comparing the number of event detected and the event times predicted), the boosted trees model (which maximizes the accuracy) was the only one not to miss any event. Hence, we selected the boosted trees model.
+
+Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one in its ability to detect gait events.
+
+## Predicting phases or events?
+
+We now have two models to compare: the Neural Network from the strategy E predicting directly the occurences of the gait events of interest and the Boosted Trees from the strategy P predicting the gait phases instead. To choose one over the other, we will compare their predictions on the test set with the real events given by the gold standard. The latter is provided by the GAITRite© mat that the subjects walked on during the data collection sessions.
+
+As any measurement tool, this mat is not perfect and can miss some contact points at the start and the end of the walking session. Hence, we need to preprocess the time series before comparing the predicted events with the real ones. Specifically, we start by shortening the time series to keep only the time window where the gold standard detected all four events perfectly. At the start of the session, we search for the first *Heel Strike* event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
+
+Next, no matter the classification strategy (phases v.s. events), we need to extract estimated event times from the model predictions to compare them with the true occurences of gait events of interest given by the gold standard. In effect, the model does not detect only one point matching the event of interest but a window of points containing the event as shown by @fig-preds-both-strategies. In the strategy P (phase predictions), the event corresponding to the beginning of a gait phase should be in principle the initial time point of that phase. But we observed that this is not the case with our model predictions. In the strategy E (event predictions), we could reasonably think instead that the exact occurence of the event of interest is in the center of the predicted time window.
+
+::: {#fig-preds-both-strategies layout="[45, -10, 45]" fig-pos="H"}
+
+![Strategy E: Predictions made by the neural network.](images/preds_events_and_real_events.png){#fig-preds-events width=270}
+
+![Strategy P: Predictions made by the boosted trees.](images/preds_phases_and_real_events.png){#fig-preds-phases width=270}
+
+Predictions from both classification strategies. The bigger and darker points represent the true occurences of gait events of interest as provided by the GAITRite© mat (gold standard).
+:::
+
+In any case, to provide a fair assessment of both models' performance, we devised a common procedure to get a single estimated event time from the predicted time window (Strategy E) or phase (Strategy P). Specifically, we first make sure to correctly identify predicted time windows or phases, using the two following rules:
+
+1. A threshold to first select only the observations with a high probability of class membership: $p > 0.4$.
+2. A time gap between two predicted windows or phases: $t = 40 ms$.
+ 
+These two rules applied sequentially allow us to define unique non-overlapping predicted windows or phases. They also allow us to have windows containing points that are not necessarily consecutive, as we need at least $40 ms$ between observations to consider them in distinct windows. Then, in each of these clearly separated windows or phases, we define the estimated occurrence of the gait event of interest as the point that has the highest probability of class membership according to the prediction model.
+
+The last step is to compare these estimated events with the ones given by the gold standard to decide which of the two strategies leads to the best results and choose a definitive model. The first and simplest criterion that we can think of is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but we still cannot tell them apart. The second criterion that can be compared is the time difference between the estimated and true occurences of gait events of interest. To that effect, @fig-boxplot-comparison shows the distributions of such time differences on the test set for each gait event of interest and for each strategy.
+
+![Mean time difference between true and predicted occurences of gait events of interest for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=600}
+
+In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the actual time of the event. This could mean that, for these events, it would give better results to take one of the first points of the predicted phase instead of the point with the highest class membership probability. However, we do not have a sound theoretical explanation of this phenomenon. Hence, we cannot currently justify to use a different procedure for estimating the occurence of heel strike events compared to toe-off events. On the other hand, in the strategy E, all of the event times are estimated near the actual ones regardless of the type of event. The estimated time median is at approximately 50 ms before the actual event, with a few outliers. Overall, @fig-boxplot-comparison suggests that the model associated with the strategy E is better at estimating the occurrences of gait events of interest.
+
+## Detailed performance of the selected model
+
+The final selected model is the neural network from the strategy E predicting directly the event times. In this section, we give a more in-depth evaluation of this model. @tbl-final-eval summarizes the values of the three performance metrics adapted to this strategy: the macro-average sensitivity and specificity and the generalized weighted Youden index.
+
+::: {#tbl-final-eval tbl-pos="H"}
+
+```{r}
+tibble::tibble(
+  youden = c("88.7%"),
+  sen = c("93.4%"),
+  spe = c("96.4%")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    youden = "Generalized Weighted Youden Index",
+    sen = "MA Sensitivity",
+    spe = "MA Specificity"
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+Performance metrics of the selected Neural Network on the test set.
+
+:::
+
+
+For a thorough comparison of our model with the gold standard, we use state-of-the-art spatio-temporal gait parameters [@hollman2011normative] that can be computed from the four gait events of the walking cycle that we are now able to estimate. 
+
+Specifically, we focused on (i) the number of cycles in a session, (ii) the cycle duration and (iii) the percentage of the stance phase. We computed the mean value of these parameters on each session from the test set by foot (hence 70 observations, 1 per session and foot in the test set).
+
+For the number of cycles in each session, we found the exact same number of cycles using our model and the gold standard, which is not surprising since we previously showed that the model detected the correct number of each event in every session. For the mean cycle duration and the mean percentage of stance phase, @fig-bland-altman presents the results in the form of Bland-Altman plots [@bland_altman].
+
+::: {#fig-bland-altman layout="[48, -4, 48]" fig-pos="H"}
+
+![Comparison of the mean cycle duration (seconds).](images/ba_cycle_length.png){#fig-ba-cycle-length width=270}
+
+![Comparison of the mean stance percentage (%).](images/ba_stance_percent.png){#fig-ba-stance-percent width=270}
+
+Bland-Altman plots to compare our model with the gold standard on classical spatio-temporal gait parameters, for both feet on the test set.
+:::
+
+For both parameters, the bias represented by the dashed line in the blue interval is really close to zero, meaning that our model gives similar results to the gold standard. More precisely, for the mean cycle duration, the differences between the two methods are between $-26$ ms and $+21$ ms, as shown by the dashed lines in the red and green intervals. Since a gait cycle typically lasts one second, this difference interval seems small enough to consider our method to be comparable to the gold standard. For the mean stance percentage, the differences are between $-8.50\%$ and $+6.5\%$ while it is known that the stance phase generally occupies about $60\%$ of the gait cycle [@LARIBI202083].
+
+
+Hence, once again, our model gives coherent results that are close to the parameters given by the reference method.
