@@ -10,6 +10,12 @@
 
 {{< include _05_Discussion.qmd >}}
 
+# Acknowledgments {.unnumbered}
+
+This work was supported by the DEMAR'AGE project funded by the I-Site NExT (Nantes Excellence Trajectory) through the French National Research Agency. Financers include Nantes University, Nantes Métropole and the Pays de la Loire Region.
+
+We would also like to thank our colleagues from the Department of Geriatrics at Nantes University Hospital for granting us access to their clinical facilities and, in particular, to the GAITRite® system.
+
 # References {.unnumbered}
 
 ::: {#refs}
