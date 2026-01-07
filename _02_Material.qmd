@@ -93,15 +93,17 @@ Summary of subjects and walking speeds used to train the model.
 
 ## Data sets {#sec-data-sets}
 
-Sensor data
+### Sensor data
+
+Raw data
 
 : As mentioned before, the IMU sensor records unit QTS representing the orientation of the hip over time, allowing the visualization of each coordinate time series (see @fig-timeserie) at each recorded time point. The four coordinates match the definition of a quaternion provided in @eq-quaternions. It is important to observe that @fig-timeserie displays the gait of a healthy individuals with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
 ![Data recorded by the IMU sensor as a four-coordinate unit quaternion time series.](images/time-serie.png){#fig-timeserie width=350}
 
-Sensor data preprocessing 
+Centered data
 
-: A centring step is applied on the quaternion time series to center quaternions around their mean. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) [@moakher02,@manton04] to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
+: A centring step is applied on the QTS to mitigate sensor shifts in position along the belt. This preprocessing step ensures that the mean quaternion of each QTS is the identity. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) [@moakher02,@manton04] to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
 
 $$
 \mathbf{q}_j^{(m)} = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!].
@@ -113,17 +115,13 @@ $$
 \mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!].
 $$ {#eq-centring-qts}
 
-[The other pre-processing step is to switch to a functional representation using cubic splines to be able to compute derivatives [@ramsay2005].]{.mark}
+B-spline representation
 
-::: {.aside}
-[AST] We should detail the parameters used for the cubic splines here for the sake of reproducibility.
+: The raw QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R **stats** package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space).
 
-[MSI] We used the stats::smooth.spline function, I don't understand what parameters should be detailed. Can you do it since you implemented the smoothing step?
-:::
+### Pressure mat data
 
-Pressure mat data
-
-: The GAITRite© mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite© mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
+The GAITRite© mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite© mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
 
 ## Feature space {#sec-feature-space}
 
@@ -182,7 +180,7 @@ where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the po
 
 Walking speed
 
-: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite© mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time-series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
+: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite© mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
 
 
 Hyper-parameters

@@ -233,13 +233,7 @@ Performance metrics on the test set for both strategies.
 
 :::
 
-[We keep one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we select the Neural Network model to maximize the GWYI. For the strategy P, we select the Boosted Trees model to maximize accuracy. We can note that for the strategy P, three models (the random forest, the boosted trees and the neural network) had close results between 89.4% and 89.7%. However, since all models had really quick computing times to make predictions on the test set, this was not a criteria to choose one model over another one, so we could simply choose the model giving the highest score.]{.mark}
-
-::: {.aside}
-[AST] Looking at @tbl-res, I would argue that clearly in strategy E their is a single winner which is the Neural Network. However, in strategy P, the Boosted Trees and Neural Network have very close accuracy (89.7% vs 89.4%). I bet the difference is not statistically significant. Maybe we could do some statistical test to compare the two models using the 5 folds of the cross-validation? If we find that there is no significant difference, we could choose the Neural Network for strategy P as well, to have the same type of model for both strategies. What do you think?
-
-[MSI] To be sure of this choice I actually tested all three models on the test set by comparing them with the GAITRite mat (comparing the number of event detected and the event times predicted) and both the other models (Random Forest and NN) were missing a few events over the test set. I did not know if it was interesting to put in the paper, especially since I explain this procedure later on when we select a strategy.
-:::
+We kept one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we selected the neural network model which maximizes the GWYI without doubts compared to all other models. For the strategy P, four models have accuracy above 88% with very similar scores. One would be tempted to choose the neural network to have the same type of model for both strategies. However, after testing all four models on the test set by comparing them with the GAITRite mat data (comparing the number of event detected and the event times predicted), the boosted trees model (which maximizes the accuracy) was the only one not to miss any event. Hence, we selected the boosted trees model.
 
 Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one in its ability to detect gait events.
 
@@ -270,12 +264,6 @@ These two rules applied sequentially allow us to define unique non-overlapping p
 The last step is to compare these estimated events with the ones given by the gold standard to decide which of the two strategies leads to the best results and choose a definitive model. The first and simplest criterion that we can think of is the number of each event detected during the walking sessions. For both strategies, the model predicts the exact number of events for every classes in each session. It means that both models seem to perform well but we still cannot tell them apart. The second criterion that can be compared is the time difference between the estimated and true occurences of gait events of interest. To that effect, @fig-boxplot-comparison shows the distributions of such time differences on the test set for each gait event of interest and for each strategy.
 
 ![Mean time difference between true and predicted occurences of gait events of interest for both strategies.](images/boxplot_both_strategies.png){#fig-boxplot-comparison width=600}
-
-::: {.aside}
-[AST] What is the optimal value of the parameter $k$? It seems to be $k = 0$ according to the table in the appendix, which means you induce from the start a bias in the predictions of about 20 ms. Have you tried $k = 0$?
-
-[MSI] The optimal $k$ is 1, I did not test $k=0$ because I wanted to somewhat reduce the class imbalance with the use of this parameter.
-:::
 
 In the strategy P, the *Heel-Strike* events seem to be well estimated but it not the case for the *Toe-Off* events that are predicted too late, about 150 ms after the actual time of the event. This could mean that, for these events, it would give better results to take one of the first points of the predicted phase instead of the point with the highest class membership probability. However, we do not have a sound theoretical explanation of this phenomenon. Hence, we cannot currently justify to use a different procedure for estimating the occurence of heel strike events compared to toe-off events. On the other hand, in the strategy E, all of the event times are estimated near the actual ones regardless of the type of event. The estimated time median is at approximately 50 ms before the actual event, with a few outliers. Overall, @fig-boxplot-comparison suggests that the model associated with the strategy E is better at estimating the occurrences of gait events of interest.
 

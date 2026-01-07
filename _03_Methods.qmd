@@ -20,7 +20,13 @@ This strategy aims at directly predicting the occurrence of gait events of inter
 
 ```{r}
 tibble::tibble(
-  class = c("Right Heel Strike", "Left Toe Off", "Left Heel Strike", "Right Toe Off", "None"),
+  class = c(
+    "Right Heel Strike",
+    "Left Toe Off",
+    "Left Heel Strike",
+    "Right Toe Off",
+    "None"
+  ),
   nb_obs = c("973", "1004", "994", "982", "158401"),
   prop = c("0.60%", "0.62%", "0.61%", "0.60%", "97.57%")
 ) |>
@@ -30,7 +36,7 @@ tibble::tibble(
     nb_obs = "Number of observations",
     prop = "Proportion"
   ) |>
-  gt::cols_align(align = "center") |> 
+  gt::cols_align(align = "center") |>
   gt::tab_style(
     style = list(gt::cell_text(style = "italic")),
     locations = gt::cells_body(columns = class)
@@ -152,12 +158,6 @@ In this strategy, we aim at predicting phases. All classes are therefore equally
 In this strategy, we aim at predicting occurences of gait events directly. As a result, four of the five classes are the classes of interest while the majority class is not relevant. Furthermore, the majority class contains the large majority of observations (for instance, $97.57\%$ of the observations for $k=0$ and $92.70\%$ of the observations for $k=1$), which represents a case of severe class imbalance. Accuracy is not adapted in this case because a model which always predicts the majority class will be deemed a *good* model in the sense of accuracy, while completely missing the classes of interest. We therefore need to use other metrics that are adapted to this situation.
 
 An important tool for designing performance metrics of classification methods is the *confusion matrix* $C$ which is a $K \times K$ matrix for a $K$-class classification problem such that the element $c_{i,j}$ represents the number of observations from the class $i$ that have been predicted in the class $j$. This matrix summarizes the performance of a classification model by showing how many observations have been correctly or incorrectly classified in each class. In a binary classification problem, the matrix reports the number of true positives (TP), false positives (FP), true negatives (TN) and false negatives (FN). Two of the metrics that can be calculated from this matrix are known as *sensitivity* and *specificity*. The sensitivity Se = TP / (TP + FN) measures the proportion of accurate predictions for the positive class among all actual positive instances. Hence, low sensitivity indicates that the model is missing many instances of the positive class. Conversely, the specificity Sp = TN / (TN + FP) measures the proportion of accurate predictions for the negative class among all actual negative instances. In scenarios with class imbalance, sensitivity is particularly crucial as it reveals how effectively the model identifies instances of the minority class, which is often designated as the positive class.
-
-::: {.aside}
-[AST] Why not use precision/recall through the F1 score?
-
-[MSI] recall = sensitivity; precision is used when the cost of a False Positive is high but in our case we don't mind classifying points as part of classes of interest even if they belong to the None class. We prefer to put too many observations in the classes of interest and then select high probability points within them.
-:::
 
 In a multiclass classification problem, we can extend these metrics to use them with more than one positive class. For detecting gait events of interest, we have four classes of interest which correspond to the minority classes compared to time points at which no relevant gait event occurs. We therefore define a $5 \times 5$ confusion matrix as exhibited in @fig-confusion-matrix. The element $c_{i,j}$ is the number of observations from the class $i$ that has been predicted in the class $j$. Therefore, $c_{i,\cdot}$ represents the number of observations from the class $i$, while $c_{\cdot,j}$ represents the number of observations that the model predicted to be in the class $j$.
 
