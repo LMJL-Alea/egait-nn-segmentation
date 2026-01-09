@@ -103,13 +103,13 @@ Raw data
 
 Centered data
 
-: A centring step is applied on the QTS to mitigate sensor shifts in position along the belt. This preprocessing step ensures that the mean quaternion of each QTS is the identity. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) [@moakher02,@manton04] to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$ as:
+: A centring step is applied on the QTS to mitigate sensor shifts in position along the belt. This preprocessing step ensures that the mean quaternion of each QTS is the identity. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$:
 
 $$
 \mathbf{q}_j^{(m)} = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!].
 $$ {#eq-mean-qts}
 
-The centered QTS $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed as:
+Numerically, @eq-mean-qts is solved iteratively following algorithms proposed in @moakher02 and @manton04. The centered QTS $\mathbf{Q}_1^{(c)}, \dots, \mathbf{Q}_n^{(c)}$ can then be computed as:
 
 $$
 \mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!].
