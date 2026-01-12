@@ -32,7 +32,7 @@ abstract: >+
   them a number of spatio-temporal parameters giving crucial information on the patient's health.
   To build a model, gait data has been acquired in the form of unit quaternion time series representing the 3D 
   hip rotation over time. Six subjects walked in a straight line wearing a wearable sensor on their right hip while 
-  walking on a reference tool (the GAITRite© pressure mat) at different walking speeds. 
+  walking on a reference tool (the GAITRite® pressure mat) at different walking speeds. 
   Two strategies were compared, one detecting directly the events labeled by the reference method and one 
   detecting the sub-phases intervening between the events. For each strategy, various supervised machine 
   learning models were evaluated with metrics adapted for imbalanced classification while placing weights on classes. 

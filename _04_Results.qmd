@@ -233,13 +233,13 @@ Performance metrics on the test set for both strategies.
 
 :::
 
-We kept one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we selected the neural network model which maximizes the GWYI without doubts compared to all other models. For the strategy P, four models have accuracy above 88% with very similar scores. One would be tempted to choose the neural network to have the same type of model for both strategies. However, after testing all four models on the test set by comparing them with the GAITRite mat data (comparing the number of event detected and the event times predicted), the boosted trees model (which maximizes the accuracy) was the only one not to miss any event. Hence, we selected the boosted trees model.
+We kept one model per strategy to maximize the performance metric evaluated on the test set. For the strategy E, we selected the neural network model which maximizes the GWYI without doubts compared to all other models. For the strategy P, four models have accuracy above 88% with very similar scores. One would be tempted to choose the neural network to have the same type of model for both strategies. However, after testing all four models on the test set by comparing them with the GAITRite® mat data (comparing the number of event detected and the event times predicted), the boosted trees model (which maximizes the accuracy) was the only one not to miss any event. Hence, we selected the boosted trees model.
 
 Now that we selected a model for each strategy, the next step is to compare the two strategies to choose the best one in its ability to detect gait events.
 
 ## Predicting phases or events?
 
-We now have two models to compare: the Neural Network from the strategy E predicting directly the occurences of the gait events of interest and the Boosted Trees from the strategy P predicting the gait phases instead. To choose one over the other, we will compare their predictions on the test set with the real events given by the gold standard. The latter is provided by the GAITRite© mat that the subjects walked on during the data collection sessions.
+We now have two models to compare: the Neural Network from the strategy E predicting directly the occurences of the gait events of interest and the Boosted Trees from the strategy P predicting the gait phases instead. To choose one over the other, we will compare their predictions on the test set with the real events given by the gold standard. The latter is provided by the GAITRite® mat that the subjects walked on during the data collection sessions.
 
 As any measurement tool, this mat is not perfect and can miss some contact points at the start and the end of the walking session. Hence, we need to preprocess the time series before comparing the predicted events with the real ones. Specifically, we start by shortening the time series to keep only the time window where the gold standard detected all four events perfectly. At the start of the session, we search for the first *Heel Strike* event which is followed by the three other events in the correct order. At the end of the session, we remove all points after the first missing event.
 
@@ -251,7 +251,7 @@ Next, no matter the classification strategy (phases v.s. events), we need to ext
 
 ![Strategy P: Predictions made by the boosted trees.](images/preds_phases_and_real_events.png){#fig-preds-phases width=270}
 
-Predictions from both classification strategies. The bigger and darker points represent the true occurences of gait events of interest as provided by the GAITRite© mat (gold standard).
+Predictions from both classification strategies. The bigger and darker points represent the true occurences of gait events of interest as provided by the GAITRite® mat (gold standard).
 :::
 
 In any case, to provide a fair assessment of both models' performance, we devised a common procedure to get a single estimated event time from the predicted time window (Strategy E) or phase (Strategy P). Specifically, we first make sure to correctly identify predicted time windows or phases, using the two following rules:

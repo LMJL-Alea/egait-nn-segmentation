@@ -1,6 +1,6 @@
 # Material {#sec-material}
 
-This section is dedicated to describing the data that we used for segmenting gait in the present work. Essentially, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) sensor at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite© mat) as a gold standard to label the gait events. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two data sets. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
+This section is dedicated to describing the data that we used for segmenting gait in the present work. Essentially, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) sensor at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to label the gait events. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two data sets. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
 
 ## Unit quaternions {#sec-quaternions}
 
@@ -48,22 +48,27 @@ We used an IMU sensor to record the hip orientation over time. The IMU was compo
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
-We asked the participants to walk on the GAITRite© mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite© device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability].
+We asked the participants to walk on the GAITRite® mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite® device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability].
 
 We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
 ```{r}
-data.frame(
-  id = c("MBA", "MBO", "MSI", "MTR", "NNE", "TDE"),
-  gender = c("M", "F", "F", "M", "F", "M"),
-  age = c("50-60", "20-30", "20-30", "20-30", "20-30", "50-60"),
-  slow = c(60, 73, 67, 77, 57, 61),
-  intermediate = c(116, 122, 115, NA, 116, NA),
-  preferential = c(145, 145, 148, 132, 147, 120),
-  fast = c(199, 188, 179, 185, 190, 193)
-) |>
+bhg |>
+  dplyr::group_by(subject, gender, age, condition) |>
+  dplyr::summarise(speed = round(mean(speed), digits = 0), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = condition, values_from = speed) |>
+  janitor::clean_names() |>
+  dplyr::select(
+    id = subject,
+    gender,
+    age,
+    slow,
+    intermediate,
+    preferential = base,
+    fast
+  ) |>
   gt::gt() |>
   gt::tab_spanner(
     label = "Walking speed (cm/s)",
@@ -99,7 +104,25 @@ Raw data
 
 : As mentioned before, the IMU sensor records unit QTS representing the orientation of the hip over time, allowing the visualization of each coordinate time series (see @fig-timeserie) at each recorded time point. The four coordinates match the definition of a quaternion provided in @eq-quaternions. It is important to observe that @fig-timeserie displays the gait of a healthy individuals with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
-![Data recorded by the IMU sensor as a four-coordinate unit quaternion time series.](images/time-serie.png){#fig-timeserie width=350}
+::: {#fig-timeserie fig-pos="H"}
+
+```{r}
+bhg$egait[[33]] |>
+  dplyr::filter(time >= 3) |>
+  autoplot() +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)")
+```
+
+Data recorded by the IMU sensor as a four-coordinate unit quaternion time series.
+
+:::
+
+::: {.callout-tip title="The [{squat}](https://cran.r-project.org/package=squat) package"}
+We developed a dedicated R package coined [{squat}](https://cran.r-project.org/package=squat) for **S**tatistics for **QUA**ternion **T**emporal Data which defines a specific data structure of class `qts` to store and manipulate unit QTS data. In particular, `bhg$egait` is a list of objects of class `qts` which stores the IMU sensor data that we collected. We implemented both a `graphics::plot()` and `ggplot2::autoplot()` S3 specializations for objects of class `qts` in [{squat}](https://cran.r-project.org/package=squat). We implemented many other S3 specializations for QTS as explained in the dedicated website[^squat-website].
+
+[^squat-website]: <https://lmjl-alea.github.io/squat/>.
+:::
 
 Centered data
 
@@ -117,11 +140,11 @@ $$ {#eq-centring-qts}
 
 B-spline representation
 
-: The raw QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R **stats** package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space).
+: The raw QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space).
 
 ### Pressure mat data
 
-The GAITRite© mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite© mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
+The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite® mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
 
 ## Feature space {#sec-feature-space}
 
@@ -180,7 +203,7 @@ where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the po
 
 Walking speed
 
-: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite© mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
+: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite® mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
 
 
 Hyper-parameters

@@ -46,7 +46,7 @@ tibble::tibble(
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
-Spatio-temporal parameters returned by the GAITRite© pressure mat.
+Spatio-temporal parameters returned by the GAITRite® pressure mat.
 
 :::
 

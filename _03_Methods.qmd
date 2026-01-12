@@ -14,7 +14,7 @@ Strategy E: Predicting gait [E]{.underline}vents
 - *Right Toe Off*,
 - *None* (all other times not corresponding to a certain event).
 
-This strategy aims at directly predicting the occurrence of gait events of interest. However, it inherits by construction of a severe class imbalance  effect, with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones (see @tbl-class-imbalance). It is clearly represented on @fig-event-timeserie where we can see the event times from the GAITRite© mat overlaid on the QTS recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
+This strategy aims at directly predicting the occurrence of gait events of interest. However, it inherits by construction of a severe class imbalance  effect, with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones (see @tbl-class-imbalance). It is clearly represented on @fig-event-timeserie where we can see the event times from the GAITRite® mat overlaid on the QTS recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
 
 ::: {#tbl-class-imbalance tbl-pos="H"}
 
