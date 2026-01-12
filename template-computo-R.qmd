@@ -23,7 +23,7 @@ bhg <- readRDS(url(
 
 This work was supported by the DEMAR'AGE project funded by the I-Site NExT (Nantes Excellence Trajectory) and by the French government through the French National Research Agency and the investment plan *France 2030*. Financers include Nantes University, Nantes Métropole and the Pays de la Loire Region.
 
-We would also like to thank our colleagues from the Department of Geriatrics at Nantes University Hospital for granting us access to their clinical facilities and, in particular, to the GAITRite® system.
+We would also like to thank our colleagues from the Department of Geriatrics at Nantes University Hospital and, in particular, Dr Guillaume Chapelet, for granting us access to their clinical facilities and, in particular, to the GAITRite® system.
 
 # References {.unnumbered}
 
