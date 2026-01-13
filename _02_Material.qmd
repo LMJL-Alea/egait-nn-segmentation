@@ -48,13 +48,19 @@ We used an IMU sensor to record the hip orientation over time. The IMU was compo
 
 ![Sensor positionned on the right hip.](images/sensor-position.png){#fig-sensor-position width=150}
 
-We asked the participants to walk on the GAITRite® mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite® device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability].
+We asked the participants to walk on the GAITRite® mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite® device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability]. Also, we asked the participants to wait for three seconds before starting to walk on the mat to ensure that the sensor was properly calibrated and stable before walking.
 
-We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024.
+We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024. The data is publicly available [^bhg-dataset]. We can therefore download it and store it in an R object for use in the rest of this document.
+
+[^bhg-dataset]: <https://zenodo.org/records/18222246>.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
 ```{r}
+bhg <- readRDS(url(
+  "https://zenodo.org/records/18222246/files/bellier_healthy_gait.rds?download=1"
+))
+
 bhg |>
   dplyr::group_by(subject, gender, age, condition) |>
   dplyr::summarise(speed = round(mean(speed), digits = 0), .groups = "drop") |>
@@ -102,27 +108,36 @@ Summary of subjects and walking speeds used to train the model.
 
 Raw data
 
-: As mentioned before, the IMU sensor records unit QTS representing the orientation of the hip over time, allowing the visualization of each coordinate time series (see @fig-timeserie) at each recorded time point. The four coordinates match the definition of a quaternion provided in @eq-quaternions. It is important to observe that @fig-timeserie displays the gait of a healthy individuals with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
+: As mentioned before, the IMU sensor records the orientation of the device over time in the form of a unit QTS every 10 milliseconds. The four coordinates match the definition of a quaternion provided in @eq-quaternions. This data is stored in the list-column `bhg$egait`.
 
-::: {#fig-timeserie fig-pos="H"}
+::: {.callout-tip title="The [{squat}](https://lmjl-alea.github.io/squat/) package"}
+We developed a dedicated R package coined [{squat}](https://lmjl-alea.github.io/squat/) for **S**tatistics for **QUA**ternion **T**emporal Data which defines a specific data structure of class `qts` to store and manipulate unit QTS data. In particular, `bhg$egait` is a list of objects of class `qts` which stores the IMU sensor data that we collected. An object of class `qts` is a [tibble](https://tibble.tidyverse.org/) with five columns: a *time* column and four columns for the quaternion coordinates named *w*, *x*, *y* and *z*.
+:::
+
+We first need to filter out the initial three seconds of data where the subject is standing still before walking on the mat. This can be achieved using the `dplyr::filter()` function. We implemented both a `graphics::plot()` and `ggplot2::autoplot()` S3 specializations for objects of class `qts` in [{squat}](https://cran.r-project.org/package=squat). Many other S3 specializations and methods for objects of class `qts` are available as explained in the dedicated website[^squat-website]. Below, we use the `autoplot` S3 specialization to produce @fig-raw-qts which shows an example of QTS from the data set `bhg`.
+
+[^squat-website]: <https://lmjl-alea.github.io/squat/>.
+
+::: {#fig-raw-qts fig-pos="H"}
 
 ```{r}
+bhg$egait <- lapply(
+  bhg$egait,
+  \(qts) {
+    dplyr::filter(qts, time > 3)
+  }
+)
 bhg$egait[[33]] |>
-  dplyr::filter(time >= 3) |>
   autoplot() +
   theme_bw() +
   labs(title = "", x = "Time (seconds)")
 ```
 
-Data recorded by the IMU sensor as a four-coordinate unit quaternion time series.
+Raw data recorded by the IMU sensor as a 4-coordinate unit QTS.
 
 :::
 
-::: {.callout-tip title="The [{squat}](https://cran.r-project.org/package=squat) package"}
-We developed a dedicated R package coined [{squat}](https://cran.r-project.org/package=squat) for **S**tatistics for **QUA**ternion **T**emporal Data which defines a specific data structure of class `qts` to store and manipulate unit QTS data. In particular, `bhg$egait` is a list of objects of class `qts` which stores the IMU sensor data that we collected. We implemented both a `graphics::plot()` and `ggplot2::autoplot()` S3 specializations for objects of class `qts` in [{squat}](https://cran.r-project.org/package=squat). We implemented many other S3 specializations for QTS as explained in the dedicated website[^squat-website].
-
-[^squat-website]: <https://lmjl-alea.github.io/squat/>.
-:::
+It is important to observe that @fig-raw-qts displays the gait of a healthy person with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
 Centered data
 
@@ -138,9 +153,49 @@ $$
 \mathbf{q}_{ij}^{(c)} = \mathbf{Q}_i^{(c)} (t_j) = \left( \mathbf{q}_j^{(m)} \right)^{-1} \mathbf{q}_{ij}, \hspace{5mm} j \in [\![ 1, p ]\!],\hspace{2mm}  i \in [\![ 1, n ]\!].
 $$ {#eq-centring-qts}
 
+From a practical perspective, the centring step can be performed by applying the `squat::centring()` function to each element of the list-column `bhg$egait`:
+
+::: {#fig-raw-qts fig-pos="H"}
+
+```{r}
+bhg$egait <- lapply(
+  bhg$egait,
+  \(qts) {
+    squat::centring(qts)
+  }
+)
+bhg$egait[[33]] |>
+  autoplot() +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)")
+```
+
+Raw data recorded by the IMU sensor after application of the centering step.
+
+:::
+
 B-spline representation
 
-: The raw QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space).
+: The raw QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space). The code below shows the steps required to perform the smoothing step for a given value of the *spar* parameter:
+
+```{r}
+spar <- 0.3 # example value for the spar parameter
+log_qts <- log(bhg$egait[[33]])
+smoothed_log_qts <- as_qts(dplyr::tibble(
+  time = log_qts$time,
+  w = 0,
+  x = stats::smooth.spline(log_qts$time, log_qts$x, spar = spar)$y,
+  y = stats::smooth.spline(log_qts$time, log_qts$y, spar = spar)$y,
+  z = stats::smooth.spline(log_qts$time, log_qts$z, spar = spar)$y
+))
+smoothed_qts <- exp(smoothed_log_qts)
+smoothed_qts |>
+  autoplot() +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)")
+```
+
+The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates.
 
 ### Pressure mat data
 

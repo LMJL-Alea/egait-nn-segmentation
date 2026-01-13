@@ -4,9 +4,6 @@
 #| include: false
 library(ggplot2)
 library(squat)
-bhg <- readRDS(url(
-  "https://zenodo.org/records/18222246/files/bellier_healthy_gait.rds?download=1"
-))
 ```
 
 {{< include _01_Introduction.qmd >}}
