@@ -227,6 +227,24 @@ $$
 \end{bmatrix}.
 $$ {#eq-angular-vel}
 
+In practice, we can compute the angular velocity vector of a unit QTS using the `squat::qts2avts()` function as follows:
+
+```{r}
+avts <- squat::qts2avts(smoothed_qts)
+avts |>
+  dplyr::rename(`v[x]` = x, `v[y]` = y, `v[z]` = z) |>
+  tidyr::pivot_longer(
+    cols = c(`v[x]`, `v[y]`, `v[z]`),
+    names_to = "component",
+    values_to = "angular_velocity"
+  ) |>
+  ggplot(aes(x = time, y = angular_velocity)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angular velocity (rad/s)")
+```
+
 The angular acceleration vector $\dot{\pmb{\Omega}}$ is then computed as the derivative of the angular velocity vector:
 
 $$
@@ -242,6 +260,24 @@ $$
 \dot{\pmb{\Omega}}
 \end{bmatrix} \right)
 $$ {#eq-angular-acc}
+
+Again, we can compute the angular acceleration vector of a unit QTS using the `squat::qts2aats()` function as follows:
+
+```{r}
+# aats <- squat::qts2aats(smoothed_qts)
+# aats |>
+#   dplyr::rename(`a[x]` = x, `a[y]` = y, `a[z]` = z) |>
+#   tidyr::pivot_longer(
+#     cols = c(`a[x]`, `a[y]`, `a[z]`),
+#     names_to = "component",
+#     values_to = "angular_acceleration"
+#   ) |>
+#   ggplot(aes(x = time, y = angular_acceleration)) +
+#   geom_line() +
+#   facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+#   theme_bw() +
+#   labs(title = "", x = "Time (seconds)", y = "Angular acceleration (rad/s²)")
+```
 
 Euler angles
 
