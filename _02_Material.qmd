@@ -50,9 +50,7 @@ We used an IMU sensor to record the hip orientation over time. The IMU was compo
 
 We asked the participants to walk on the GAITRite® mat, a gold standard in gait analysis [@Menz2004] while wearing the IMU sensor on their right hip. This choice, required to have a labeling of gait events from the walkway, constrained the path followed by the participants to a straight line of approximately nine meters. The GAITRite® device gives various information thanks to pressure sensors contained in the mat such as the time points where the subject feet touch and leave the ground at each step, which are exactly the gait events of interest to train our segmentation models for the IMU sensor. To use the two devices simultaneously, they were started at the same time by the same person with their two index fingers, allowing a good synchronization between devices [@de1992stability]. Also, we asked the participants to wait for three seconds before starting to walk on the mat to ensure that the sensor was properly calibrated and stable before walking.
 
-We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024. The data is publicly available[^bhg-dataset]. We can therefore download it and store it in an R object for use in the rest of this document.
-
-[^bhg-dataset]: <https://zenodo.org/records/18222246>.
+We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024. The data has been publicly released [@bellanger_2026_18222246]. We can therefore download it and store it in an R object for use in the rest of this document.
 
 ::: {#tbl-subjects tbl-pos="H"}
 
@@ -178,7 +176,13 @@ Raw data recorded by the IMU sensor after application of the centering step.
 
 B-spline representation
 
-: The raw (or centered) QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation separately to each component of the logarithm of the centered QTS using the `smooth.spline()` from the R {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space. We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space). The code below shows the steps required to perform the smoothing step for a given value of the *spar* parameter:
+: The raw (or centered) QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation $\mathbf{v}_s$ to each component of the logarithm $\mathbf{v} = \ln \mathbf{q}(t)$ of the centered QTS independently using the `smooth.spline()` from the `R` {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space which reads:
+
+$$
+\mathbf{q}_s (t) = \exp \mathbf{v}_s (t), \text{ where } \mathbf{v}(t) = \ln \mathbf{q}(t).
+$$ {#eq-smoothed-qts}
+
+We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space). The code below shows the steps required to perform the smoothing step for a given value of the *spar* parameter:
 
 ::: {#fig-smoothed-qts fig-pos="H"}
 
@@ -227,11 +231,11 @@ $$
 \end{bmatrix}.
 $$ {#eq-angular-vel}
 
-In practice, we can compute the angular velocity vector of a unit QTS using the `squat::qts2avts()` function as follows:
+Recall that $\mathbf{q} = \exp \mathbf{v}$ where $\mathbf{v}$ is the logarithm of $\mathbf{q}$ introduced in @eq-smoothed-qts. Then, we have after simple mathematical computations that $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$. Therefore, the angular velocity vector is nothing but twice the vector part of the temporal derivative $\dot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2avvts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular velocity vector at each time point:
 
 ```{r}
-avts <- squat::qts2avts(smoothed_qts)
-avts |>
+avvts <- squat::qts2avvts(bhg$egait[[33]], spar = spar)
+avvts |>
   dplyr::rename(`v[x]` = x, `v[y]` = y, `v[z]` = z) |>
   tidyr::pivot_longer(
     cols = c(`v[x]`, `v[y]`, `v[z]`),
@@ -261,22 +265,22 @@ $$
 \end{bmatrix} \right)
 $$ {#eq-angular-acc}
 
-Again, we can compute the angular acceleration vector of a unit QTS using the `squat::qts2aats()` function as follows:
+From $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$, we can write the second temporal derivative of $\mathbf{q}$ as $\ddot{\mathbf{q}} = \mathbf{q} \left( \dot{\mathbf{v}} \dot{\mathbf{v}} + \ddot{\mathbf{v}} \right)$. Therefore, the angular acceleration vector is nothing but twice the vector part of the second temporal derivative $\ddot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2aavts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular acceleration vector at each time point:
 
 ```{r}
-# aats <- squat::qts2aats(smoothed_qts)
-# aats |>
-#   dplyr::rename(`a[x]` = x, `a[y]` = y, `a[z]` = z) |>
-#   tidyr::pivot_longer(
-#     cols = c(`a[x]`, `a[y]`, `a[z]`),
-#     names_to = "component",
-#     values_to = "angular_acceleration"
-#   ) |>
-#   ggplot(aes(x = time, y = angular_acceleration)) +
-#   geom_line() +
-#   facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
-#   theme_bw() +
-#   labs(title = "", x = "Time (seconds)", y = "Angular acceleration (rad/s²)")
+aavts <- squat::qts2aavts(bhg$egait[[33]], spar = spar)
+aavts |>
+  dplyr::rename(`a[x]` = x, `a[y]` = y, `a[z]` = z) |>
+  tidyr::pivot_longer(
+    cols = c(`a[x]`, `a[y]`, `a[z]`),
+    names_to = "component",
+    values_to = "angular_acceleration"
+  ) |>
+  ggplot(aes(x = time, y = angular_acceleration)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angular acceleration (rad/s²)")
 ```
 
 Euler angles
@@ -297,7 +301,23 @@ $$
 \end{bmatrix}
 $$ {#eq-rpy}
 
-where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane.
+where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane. This is implemented in the `squat::qts2rpyts()` function, which returns a tibble with columns `time`, `roll`, `pitch` and `yaw` storing the roll, pitch and yaw angles at each time point:
+
+```{r}
+aavts <- squat::qts2rpyts(smoothed_qts)
+aavts |>
+  dplyr::rename(Roll = roll, Pitch = pitch, Yaw = yaw) |>
+  tidyr::pivot_longer(
+    cols = c(Roll, Pitch, Yaw),
+    names_to = "component",
+    values_to = "angle_values"
+  ) |>
+  ggplot(aes(x = time, y = angle_values)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angle (rad)")
+```
 
 Walking speed
 
