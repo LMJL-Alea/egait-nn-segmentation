@@ -6,7 +6,7 @@ Gait event detection is performed by evaluating and comparing two strategies to 
 
 Strategy E: Predicting gait [E]{.underline}vents
 
-: The strategy E pertains to directly predicting the gait events occuring when walking. Specifically, we classify the observations into five categories:
+: The strategy E pertains to directly predicting the gait events occuring when walking. Specifically, time points are viewed as statistical units (observations) and we aim at classifying them into five categories:
 
 - *Right Heel Strike*,
 - *Left Toe Off*,
@@ -14,7 +14,7 @@ Strategy E: Predicting gait [E]{.underline}vents
 - *Right Toe Off*,
 - *None* (all other times not corresponding to a certain event).
 
-This strategy aims at directly predicting the occurrence of gait events of interest. However, it inherits by construction of a severe class imbalance  effect, with the *None* class widely over-represented. Indeed, the class that represents all the times that do not belong to an event is clearly larger than the four other ones (see @tbl-class-imbalance). It is clearly represented on @fig-event-timeserie where we can see the event times from the GAITRite® mat overlaid on the QTS recorded by the IMU. Each colored point represents a different event and all other times belong to the *None* class.
+The first four events  (RHS, LTO, LHS and RTO) are coined *events of interest* while the last one encodes the so-called *negative* class. While conveniently aiming at directly predicting the occurrence of gait events of interest, this strategy suffers from a severe class imbalance issue, with the *None* (negative) class being widely over-represented as summarized in @tbl-class-imbalance.
 
 ::: {#tbl-class-imbalance tbl-pos="H"}
 
@@ -47,6 +47,8 @@ tibble::tibble(
 Strategy E: Count and proportion of observations in each class.
 
 :::
+
+Another way of showing this issue is to overlay the occurence of the events of interest detected by the GAITRite® mat on a QTS recorded by the IMU device (see @fig-event-timeserie). Each colored point represents an event of interest and all other times belong to the *None* class.
 
 ![Gait event occurences overlaid on a unit QTS.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350}
 

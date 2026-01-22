@@ -206,7 +206,7 @@ smoothed_qts |>
 Smoothed version of a centered QTS.
 :::
 
-The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates. @fig-smoothed-qts nicely shows the smoothing effect with subtle variations along the curves that are smoothed out.
+The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates. The function `squat::qts2sqts()` is dedicated to performing this exact computation. @fig-smoothed-qts nicely shows the smoothing effect with subtle variations along the curves that are smoothed out.
 
 ### Pressure mat data
 
