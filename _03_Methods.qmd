@@ -16,9 +16,10 @@ Strategy E: Predicting gait [E]{.underline}vents
 
 The first four events  (RHS, LTO, LHS and RTO) are coined *events of interest* while the last one encodes the so-called *negative* class. While conveniently aiming at directly predicting the occurrence of gait events of interest, this strategy suffers from a severe class imbalance issue, with the *None* (negative) class being widely over-represented as summarized in @tbl-class-imbalance.
 
-::: {#tbl-class-imbalance tbl-pos="H"}
-
 ```{r}
+#| label: tbl-class-imbalance
+#| tbl-cap: "Strategy E: Count and proportion of observations in each class."
+#| tbl-pos: "H"
 tibble::tibble(
   class = c(
     "Right Heel Strike",
@@ -44,9 +45,82 @@ tibble::tibble(
   gt::tab_options(column_labels.background.color = "#616161")
 ```
 
-Strategy E: Count and proportion of observations in each class.
+[AST] TO MODIFY
 
-:::
+Finally, the following code creates the labelled data set that we will use to elaborate the feature space and produces @tbl-class-summary which exhibits class frequencies whether we focus on gait events () or gait phases ().
+
+```{r}
+#| label: tbl-class-summary
+#| tbl-cap: Two tables
+#| tbl-subcap: ["mtcars", "Just cars"]
+#| layout-ncol: 2
+#| classes: plain
+events_to_phases <- function(events) {
+  events_of_interest <- events != "None"
+  first_event <- events[events_of_interest][1]
+  phase_durations <- diff(c(0, sort(which(events_of_interest))))
+  n_phases <- length(phase_durations)
+  phase_names <- switch(
+    first_event,
+    "RHS" = rep(
+      c("Swing", "Pre-Stance", "Stance", "Pre-Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LTO" = rep(
+      c("Pre-Stance", "Stance", "Pre-Swing", "Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LHS" = rep(
+      c("Stance", "Pre-Swing", "Swing", "Pre-Stance"),
+      times = n_phases
+    )[1:n_phases],
+    "RTO" = rep(
+      c("Pre-Swing", "Swing", "Pre-Stance", "Stance"),
+      times = n_phases
+    )[1:n_phases]
+  )
+  purrr::map2(
+    phase_names,
+    phase_durations,
+    \(phase_name, phase_duration) rep(phase_name, times = phase_duration)
+  ) |>
+    purrr::list_c()
+}
+
+labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
+  gaitrite_data <- gaitrite_data |>
+    dplyr::filter(session == session_index) |>
+    dplyr::select(-session)
+  imu_data[[session_index]] |>
+    dplyr::left_join(gaitrite_data, by = c("time" = "event_time")) |>
+    dplyr::mutate(
+      event_type = dplyr::if_else(is.na(event_type), "None", event_type),
+      phase_type = events_to_phases(event_type)
+    )
+}) |>
+  dplyr::bind_rows(.id = "session") |>
+  dplyr::mutate(
+    session = as.numeric(session),
+    event_type = factor(
+      event_type,
+      levels = c("RHS", "LTO", "LHS", "RTO", "None")
+    ),
+    phase_type = factor(
+      phase_type,
+      levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
+    )
+  )
+
+labelled_gait_data |>
+  dplyr::count(event_type) |>
+  gt::gt()
+
+labelled_gait_data |>
+  dplyr::count(phase_type) |>
+  gt::gt()
+```
+
+We can notice that gait events of interest are largely under-represented while this class imbalance issue is moderate when we put the focus on gait phases.
 
 Another way of showing this issue is to overlay the occurence of the events of interest detected by the GAITRite® mat on a QTS recorded by the IMU device (see @fig-event-timeserie). Each colored point represents an event of interest and all other times belong to the *None* class.
 

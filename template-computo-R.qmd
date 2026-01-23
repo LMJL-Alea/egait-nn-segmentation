@@ -1,6 +1,7 @@
 \tableofcontents
 
 ```{r}
+#| label: setup
 #| include: false
 library(ggplot2)
 library(squat)

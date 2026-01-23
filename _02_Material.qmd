@@ -52,9 +52,10 @@ We asked the participants to walk on the GAITRite® mat, a gold standard in gait
 
 We included six subjects in this study (three men and three women) of different ages and walking at different speeds to have a variety of gait data. @tbl-subjects summarized the demographic characteristics of the participants. We recorded a total of 174 walking sessions between June and September 2024. The data has been publicly released [@bellanger_2026_18222246]. We can therefore download it and store it in an R object for use in the rest of this document.
 
-::: {#tbl-subjects tbl-pos="H"}
-
 ```{r}
+#| label: tbl-subjects
+#| tbl-cap: "Summary of subjects and walking speeds used to train the model."
+#| tbl-pos: "H"
 bhg <- readRDS(url(
   "https://zenodo.org/records/18222246/files/bellier_healthy_gait.rds?download=1"
 ))
@@ -96,10 +97,6 @@ bhg |>
   )
 ```
 
-Summary of subjects and walking speeds used to train the model.
-
-:::
-
 ## Data sets {#sec-data-sets}
 
 ### Sensor data
@@ -116,9 +113,10 @@ We first need to filter out the initial three seconds of data where the subject 
 
 [^squat-website]: <https://lmjl-alea.github.io/squat/>.
 
-::: {#fig-raw-qts fig-pos="H"}
-
 ```{r}
+#| label: fig-raw-qts
+#| fig-cap: "Raw data recorded by the IMU sensor as a 4-coordinate unit QTS."
+#| fig-pos: "H"
 bhg$egait <- lapply(
   bhg$egait,
   \(qts) {
@@ -130,10 +128,6 @@ bhg$egait[[33]] |>
   theme_bw() +
   labs(title = "", x = "Time (seconds)")
 ```
-
-Raw data recorded by the IMU sensor as a 4-coordinate unit QTS.
-
-:::
 
 It is important to observe that @fig-raw-qts displays the gait of a healthy person with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
@@ -153,9 +147,10 @@ $$ {#eq-centring-qts}
 
 From a practical perspective, the centring step can be performed by applying the `squat::centring()` function to each element of the list-column `bhg$egait`:
 
-::: {#fig-centered-qts fig-pos="H"}
-
 ```{r}
+#| label: fig-centered-qts
+#| fig-cap: "Raw data recorded by the IMU sensor after application of the centering step."
+#| fig-pos: "H"
 bhg$egait <- lapply(
   bhg$egait,
   \(qts) {
@@ -167,10 +162,6 @@ bhg$egait[[33]] |>
   theme_bw() +
   labs(title = "", x = "Time (seconds)")
 ```
-
-Raw data recorded by the IMU sensor after application of the centering step.
-
-:::
 
 @fig-centered-qts shows the same unit QTS as exhibited in @fig-raw-qts after the centring step. It has the effect of centering quaternions around the neutral element $(1,0,0,0)$ of the Lie group which is visible notably on the $w$ component.
 
@@ -184,9 +175,10 @@ $$ {#eq-smoothed-qts}
 
 We used the default settings of the `stats::smooth.spline()` function except for the *spar* parameter which we tuned as a hyper-parameter (see @sec-feature-space). The code below shows the steps required to perform the smoothing step for a given value of the *spar* parameter:
 
-::: {#fig-smoothed-qts fig-pos="H"}
-
 ```{r}
+#| label: fig-smoothed-qts
+#| fig-cap: "Smoothed version of a centered QTS."
+#| fig-pos: "H"
 spar <- 0.3 # example value for the spar parameter
 log_qts <- log(bhg$egait[[33]])
 smoothed_log_qts <- as_qts(dplyr::tibble(
@@ -203,14 +195,200 @@ smoothed_qts |>
   labs(title = "", x = "Time (seconds)")
 ```
 
-Smoothed version of a centered QTS.
-:::
-
 The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates. The function `squat::qts2sqts()` is dedicated to performing this exact computation. @fig-smoothed-qts nicely shows the smoothing effect with subtle variations along the curves that are smoothed out.
 
 ### Pressure mat data
 
-The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite® mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations between the different classes and train models on this labeled data.
+The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite® mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations into the different classes and train models on this labeled data.
+
+As described in @sec-introduction and nicely summarized in @fig-walking-cycle, the gait events of interest are :
+
+- *Right Heel Strike* (RHS) which corresponds to the moment when the right foot touches the ground for the first type;
+- *Left Toe Off* (LTO) which corresponds to the moment when the left foot leaves the ground entirely;
+- *Left Heel Strike* (LHS) which corresponds to the moment when the left foot touches the ground for the first type;
+- *Right Toe Off* (RTO) which corresponds to the moment when the right foot leaves the ground entirely.
+
+From these events, one can define phases within the gait cycle as follows:
+
+- *Pre-Stance* phase: timespan between two consecutive RHS and LTO events;
+- *Stance* phase: timespan between two consecutive LTO and LHS events;
+- *Pre-Swing* phase: timespan between two consecutive LHS and RTO events;
+- *Swing* phase: timespan between two consecutive RTO and RHS events.
+
+The part of the raw data from the GAITRite® walkway that we kept for labeling the data is made of three variables:
+
+```{r}
+#| label: tbl-gaitrite
+#| tbl-cap: "An illustration (33rd session) of the subset of GAITRite data used for detecting the key events for gait segmentation."
+#| tbl-pos: "H"
+bhg$gaitrite[[33]] |>
+  dplyr::select(foot, first_contact, last_contact) |>
+  gt::gt() |>
+  gt::cols_label(
+    foot = "Foot",
+    first_contact = "First Contact (s)",
+    last_contact = "Last Contact (s)"
+  ) |>
+  gt::opt_stylize(style = 6, color = 'gray') |>
+  gt::cols_align(align = "center") |>
+  gt::tab_style(
+    style = "vertical-align:top",
+    locations = gt::cells_column_labels()
+  )
+```
+
+@tbl-gaitrite describes each occurence of a foot (`foot`: 0 for left foot, 1 for right foot) touching the ground, from the moment it touches it for the first time (`first_contact`) to the moment when it leaves it entirely (`last_contact`). Therefore, for instance, we can extract the RHS events by (i) filtering the table to keep only rows for which `foot == 1` and (ii) selecting the `first_contact` column which will contain exactly the times at which RHS events occured.
+
+An additional preprocessing step is required as part of the synchronization between the GAITRite® and IMU devices. In effect, while we setup a procedure to optimize synchronization, the procedure is only precise up to 5/10 milliseconds. Furthermore, the two devices have different frequencies. Hence, we need to match timepoints measured by the GAITRite® device to the closest timepoint measured by the IMU device.
+
+Another important data pre-processing step pertains to making sure that the retrieved events are ordered appropriately. In effect, by definition, RTO events should follow LHS events, which in turn should follow LTO events which in turn should follow RHS events. The pressure mat might make some labeling mistakes, notably at the beginning or at the end of the walking session, making this verification step critical.
+
+Finally, with the aim of segmenting gait data into gait cycles in a streamlined fashion as the data is measured in real time, we will rely only on present and past data but not future data. Hence, we can filter out the data measured by the IMU device after the occurence of the last gait event of interest as it will not be used. Also, in the present work, we used data up to five timepoints back in time. Hence, we can also filter out all the data measured by the IMU device before the occurence of the first gait event of interest except for the 10 timepoints preceding that first event.
+
+The following code achieves all the pre-processing steps described above and produces @fig-imu-gaitrite which shows events of interest overlaid on a unit QTS measured by the IMU device:
+
+```{r}
+#| label: fig-imu-gaitrite
+#| fig-cap: "A unit QTS (33rd session) measured by the IMU device on which are overlaid the four events of interest detected by the GAITRite® device."
+#| fig-pos: "H"
+match_gaitrite_to_imu_timepoints <- function(
+  gaitrite_timepoints,
+  imu_timepoints
+) {
+  keep <- gaitrite_timepoints >= min(imu_timepoints)
+  keep <- keep & gaitrite_timepoints <= max(imu_timepoints)
+  gaitrite_timepoints <- gaitrite_timepoints[keep]
+  sort(purrr::map_dbl(gaitrite_timepoints, \(gaitrite_timepoint) {
+    idx <- which.min(abs(imu_timepoints - gaitrite_timepoint))
+    imu_timepoints[idx]
+  }))
+}
+
+# Read raw events of interest from
+# gaitrite and match them to imu clock
+
+rhs <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
+  .gaitrite |>
+    dplyr::filter(foot == 1) |>
+    dplyr::pull(first_contact) |>
+    match_gaitrite_to_imu_timepoints(imu_timepoints = .imu$time)
+})
+
+lto <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
+  .gaitrite |>
+    dplyr::filter(foot == 0) |>
+    dplyr::pull(last_contact) |>
+    match_gaitrite_to_imu_timepoints(imu_timepoints = .imu$time)
+})
+
+lhs <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
+  .gaitrite |>
+    dplyr::filter(foot == 0) |>
+    dplyr::pull(first_contact) |>
+    match_gaitrite_to_imu_timepoints(imu_timepoints = .imu$time)
+})
+
+rto <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
+  .gaitrite |>
+    dplyr::filter(foot == 1) |>
+    dplyr::pull(last_contact) |>
+    match_gaitrite_to_imu_timepoints(imu_timepoints = .imu$time)
+})
+
+# Make sure events of interest respect
+# the order RHS --> LTO --> LHS --> RTO
+
+gaitrite_data <- purrr::map(1:nrow(bhg), \(index) {
+  out <- dplyr::bind_rows(
+    tibble::tibble(
+      event_time = rhs[[index]],
+      event_type = rep("RHS", length(rhs[[index]]))
+    ),
+    tibble::tibble(
+      event_time = lto[[index]],
+      event_type = rep("LTO", length(lto[[index]]))
+    ),
+    tibble::tibble(
+      event_time = lhs[[index]],
+      event_type = rep("LHS", length(lhs[[index]]))
+    ),
+    tibble::tibble(
+      event_time = rto[[index]],
+      event_type = rep("RTO", length(rto[[index]]))
+    )
+  ) |>
+    dplyr::arrange(event_time)
+  phase_index <- 1
+  out$phase <- rep(phase_index, nrow(out))
+  for (i in 2:nrow(out)) {
+    current_event <- out$event_type[i]
+    previous_event <- out$event_type[i - 1]
+    same_phase <- switch(
+      current_event,
+      "RHS" = previous_event == "RTO",
+      "LTO" = previous_event == "RHS",
+      "LHS" = previous_event == "LTO",
+      "RTO" = previous_event == "LHS"
+    )
+    if (same_phase) {
+      out$phase[i] <- phase_index
+    } else {
+      phase_index <- phase_index + 1
+      out$phase[i] <- phase_index
+    }
+  }
+  largest_phase_index <- out |>
+    dplyr::count(phase) |>
+    dplyr::pull(n) |>
+    which.max()
+  out |>
+    dplyr::filter(phase == largest_phase_index) |>
+    dplyr::select(-phase)
+}) |>
+  dplyr::bind_rows(.id = "session") |>
+  dplyr::mutate(session = as.numeric(session))
+
+# Filter out imu data collected after
+# the last event of interest and before
+# 10 points before the first event
+
+t_min <- gaitrite_data |>
+  dplyr::group_by(session) |>
+  dplyr::summarise(event_time = min(event_time)) |>
+  dplyr::pull(event_time)
+t_max <- gaitrite_data |>
+  dplyr::group_by(session) |>
+  dplyr::summarise(event_time = max(event_time)) |>
+  dplyr::pull(event_time)
+
+imu_data <- purrr::pmap(list(bhg$egait, t_min, t_max), \(.imu, .t_min, .t_max) {
+  idx_min <- which(.imu$time == .t_min)[1]
+  idx_max <- which(.imu$time == .t_max)[1]
+  lower_bnd <- max(idx_min - 10, 1)
+  upper_bnd <- min(idx_max, nrow(.imu))
+  .imu[lower_bnd:upper_bnd, ]
+})
+
+# Plot data from the 33rd session
+# as an example
+
+source("scripts/utils-viz.R")
+
+gaitrite33 <- gaitrite_data[gaitrite_data$session == 33, ]
+rhs33 <- gaitrite33 |>
+  dplyr::filter(event_type == "RHS") |>
+  dplyr::pull(event_time)
+lto33 <- gaitrite33 |>
+  dplyr::filter(event_type == "LTO") |>
+  dplyr::pull(event_time)
+lhs33 <- gaitrite33 |>
+  dplyr::filter(event_type == "LHS") |>
+  dplyr::pull(event_time)
+rto33 <- gaitrite33 |>
+  dplyr::filter(event_type == "RTO") |>
+  dplyr::pull(event_time)
+plot_ts(imu_data[[33]], rhs33, rto33, lhs33, lto33)
+```
 
 ## Feature space {#sec-feature-space}
 
@@ -231,10 +409,13 @@ $$
 \end{bmatrix}.
 $$ {#eq-angular-vel}
 
-Recall that $\mathbf{q} = \exp \mathbf{v}$ where $\mathbf{v}$ is the logarithm of $\mathbf{q}$ introduced in @eq-smoothed-qts. Then, we have after simple mathematical computations that $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$. Therefore, the angular velocity vector is nothing but twice the vector part of the temporal derivative $\dot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2avvts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular velocity vector at each time point:
+Recall that $\mathbf{q} = \exp \mathbf{v}$ where $\mathbf{v}$ is the logarithm of $\mathbf{q}$ introduced in @eq-smoothed-qts. Then, we have after simple mathematical computations that $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$. Therefore, the angular velocity vector is nothing but twice the vector part of the temporal derivative $\dot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2avvts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular velocity vector at each time point as illustrated by @fig-avvts:
 
 ```{r}
-avvts <- squat::qts2avvts(bhg$egait[[33]], spar = spar)
+#| label: fig-avvts
+#| fig-cap: "An illustration (33rd session) of the angular velocity vector time series representation."
+#| fig-pos: "H"
+avvts <- squat::qts2avvts(imu_data[[33]], spar = spar)
 avvts |>
   dplyr::rename(`v[x]` = x, `v[y]` = y, `v[z]` = z) |>
   tidyr::pivot_longer(
@@ -265,10 +446,13 @@ $$
 \end{bmatrix} \right)
 $$ {#eq-angular-acc}
 
-From $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$, we can write the second temporal derivative of $\mathbf{q}$ as $\ddot{\mathbf{q}} = \mathbf{q} \left( \dot{\mathbf{v}} \dot{\mathbf{v}} + \ddot{\mathbf{v}} \right)$. Therefore, the angular acceleration vector is nothing but twice the vector part of the second temporal derivative $\ddot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2aavts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular acceleration vector at each time point:
+From $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$, we can write the second temporal derivative of $\mathbf{q}$ as $\ddot{\mathbf{q}} = \mathbf{q} \left( \dot{\mathbf{v}} \dot{\mathbf{v}} + \ddot{\mathbf{v}} \right)$. Therefore, the angular acceleration vector is nothing but twice the vector part of the second temporal derivative $\ddot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2aavts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular acceleration vector at each time point as illustrated by @fig-aavts:
 
 ```{r}
-aavts <- squat::qts2aavts(bhg$egait[[33]], spar = spar)
+#| label: fig-aavts
+#| fig-cap: "An illustration (33rd session) of the angular acceleration vector time series representation."
+#| fig-pos: "H"
+aavts <- squat::qts2aavts(imu_data[[33]], spar = spar)
 aavts |>
   dplyr::rename(`a[x]` = x, `a[y]` = y, `a[z]` = z) |>
   tidyr::pivot_longer(
@@ -301,11 +485,14 @@ $$
 \end{bmatrix}
 $$ {#eq-rpy}
 
-where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane. This is implemented in the `squat::qts2rpyts()` function, which returns a tibble with columns `time`, `roll`, `pitch` and `yaw` storing the roll, pitch and yaw angles at each time point:
+where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane. This is implemented in the `squat::qts2rpyts()` function, which returns a tibble with columns `time`, `roll`, `pitch` and `yaw` storing the roll, pitch and yaw angles at each time point as illustrated by @fig-rpyts:
 
 ```{r}
-aavts <- squat::qts2rpyts(smoothed_qts)
-aavts |>
+#| label: fig-rpyts
+#| fig-cap: "An illustration (33rd session) of the roll-pitch-yaw time series representation."
+#| fig-pos: "H"
+rpyts <- squat::qts2rpyts(imu_data[[33]])
+rpyts |>
   dplyr::rename(Roll = roll, Pitch = pitch, Yaw = yaw) |>
   tidyr::pivot_longer(
     cols = c(Roll, Pitch, Yaw),
@@ -322,7 +509,6 @@ aavts |>
 Walking speed
 
 : It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite® mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
-
 
 Hyper-parameters
 
