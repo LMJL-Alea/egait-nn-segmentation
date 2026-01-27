@@ -2,7 +2,7 @@
 
 In this work, the objective is to detect right and left heel strike and toe off events from hip orientation data over time. Knowledge of the occurences of these events is critical to compute key gait parameters such as the mean and the variability of stride duration, metrics of asymmetry or ratio stance/swing which have been proven to be clinically relevant [@annweiler2009risk;@beauchet2016poor]. We propose to address this problem by training, tuning and comparing several supervised classification models. In details, we consider the timepoints as the statistical units (observations) and we aim at training models to affect a *label* to each of them. This requires to elaborate a *labelled gait data* set in which we know which timepoints correspond to the occurence of the key gait events.
 
-For this purpose, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to record the occurences of the gait events of interest. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two collected data sets and the elaboration of the final labelled data set. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
+For this purpose, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to record the occurences of the gait events of interest. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two collected data sets and the elaboration of the final labelled data set.
 
 ## Unit quaternions {#sec-quaternions}
 
@@ -91,21 +91,14 @@ bhg |>
     fast = "Fast"
   ) |>
   gt::sub_missing() |>
-  gt::opt_stylize(style = 6, color = 'gray') |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = "vertical-align:top",
-    locations = gt::cells_column_labels()
-  )
+  gt_custom_theme()
 ```
 
-## Data sets {#sec-data-sets}
+## IMU data {#sec-imu-data}
 
-### Sensor data
+### Raw IMU data
 
-Raw data
-
-: As mentioned before, the IMU sensor records the orientation of the device over time in the form of a unit QTS every 10 milliseconds. The four coordinates match the definition of a quaternion provided in @eq-quaternions. This data is stored in the list-column `bhg$egait`.
+As mentioned before, the IMU records the orientation of the device over time in the form of a unit QTS every 10 milliseconds. The four coordinates match the definition of a quaternion provided in @eq-quaternions. This data is stored in the list-column `bhg$egait`.
 
 ::: {.callout-tip title="The [{squat}](https://lmjl-alea.github.io/squat/) package"}
 We developed a dedicated R package coined [{squat}](https://lmjl-alea.github.io/squat/) for **S**tatistics for **QUA**ternion **T**emporal Data which defines a specific data structure of class `qts` to store and manipulate unit QTS data. In particular, `bhg$egait` is a list of objects of class `qts` which stores the IMU sensor data that we collected. An object of class `qts` is a [tibble](https://tibble.tidyverse.org/) with five columns: a *time* column and four columns for the quaternion coordinates named *w*, *x*, *y* and *z*.
@@ -133,9 +126,9 @@ bhg$egait[[33]] |>
 
 It is important to observe that @fig-raw-qts displays the gait of a healthy person with nicely depicted gait cycles that are consistent over time. Impaired gait will not necessarily exhibit the same regularity.
 
-Centered data
+### Centered IMU data
 
-: A centring step is applied on the QTS to mitigate sensor shifts in position along the belt. This preprocessing step ensures that the mean quaternion of each QTS is the identity. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$:
+A centring step is applied on the QTS to mitigate sensor shifts in position along the belt. This preprocessing step ensures that the mean quaternion of each QTS is the identity. In details, let $\mathbf{Q}_1, \dots, \mathbf{Q}_n$ be $n$ QTS observed on the same time grid $t_1 < t_2 < \dots < t_p$. Recall that we write $\mathbf{Q}_i(t_j) = \mathbf{q}_{ij} \in \mathbb{H}_u$, for any $i \in [\![ 1, n ]\!]$ and $j \in [\![ 1, p ]\!]$. We use the Fréchet mean associated to the geodesic distance $d_g$ (see @eq-geodesic-distance) to compute the mean $\mathbf{q}_j^{(m)}$ of all quaternions $\mathbf{q}_{1j}, \dots, \mathbf{q}_{nj}$ at a given time point $t_j$:
 
 $$
 \mathbf{q}_j^{(m)} = \underset{\mathbf{q} \in \mathbb{H}_u}{\mathrm{argmin}} \sum_{i=1}^n d_g^2(\mathbf{q}_{ij}, \mathbf{q}), \hspace{5mm} j \in [\![ 1, p ]\!].
@@ -167,9 +160,9 @@ bhg$egait[[33]] |>
 
 @fig-centered-qts shows the same unit QTS as exhibited in @fig-raw-qts after the centring step. It has the effect of centering quaternions around the neutral element $(1,0,0,0)$ of the Lie group which is visible notably on the $w$ component.
 
-B-spline representation
+### Smoothed IMU data
 
-: The raw (or centered) QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation $\mathbf{v}_s$ to each component of the logarithm $\mathbf{v} = \ln \mathbf{q}(t)$ of the centered QTS independently using the `smooth.spline()` from the `R` {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space which reads:
+The raw (or centered) QTS data recorded by the sensor can be noisy due to small movements of the sensor during walking or electronic noise. To reduce this noise, we applied a smoothing step on the centered QTS using cubic splines. This step requires to choose a smoothness parameter that controls the amount of smoothing applied to the original data. A higher value of this parameter results in a smoother QTS but may also remove relevant information. In details, we fit a smoothing cubic spline representation $\mathbf{v}_s$ to each component of the logarithm $\mathbf{v} = \ln \mathbf{q}(t)$ of the centered QTS independently using the `smooth.spline()` from the `R` {stats} package. The functional representation of the QTS itself is then obtained by exponentiating the smoothed logarithm back to the unit quaternion space which reads:
 
 $$
 \mathbf{q}_s (t) = \exp \mathbf{v}_s (t), \text{ where } \mathbf{v}(t) = \ln \mathbf{q}(t).
@@ -199,11 +192,9 @@ smoothed_qts |>
 
 The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates. The function `squat::qts2sqts()` is dedicated to performing this exact computation. @fig-smoothed-qts nicely shows the smoothing effect with subtle variations along the curves that are smoothed out.
 
-### Pressure mat data {#sec-gaitrite-data}
+## Pressure mat data {#sec-gaitrite-data}
 
-The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite® mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations into the different classes and train models on this labeled data.
-
-As described in @sec-introduction and nicely summarized in @fig-walking-cycle, the gait events of interest are :
+The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. We specifically use this subset of the data collected by the GAITRite® mat to each timepoint of the IMU data. Specifically, as described in @sec-introduction and nicely summarized in @fig-walking-cycle, the gait events of interest are :
 
 - *Right Heel Strike* (RHS) which corresponds to the moment when the right foot touches the ground for the first type;
 - *Left Toe Off* (LTO) which corresponds to the moment when the left foot leaves the ground entirely;
@@ -228,31 +219,27 @@ bhg$gaitrite[[33]] |>
   gt::gt() |>
   gt::cols_label(
     foot = "Foot",
-    first_contact = "First Contact (s)",
-    last_contact = "Last Contact (s)"
+    first_contact = "First Contact",
+    last_contact = "Last Contact"
   ) |>
-  gt::opt_stylize(style = 6, color = 'gray') |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = "vertical-align:top",
-    locations = gt::cells_column_labels()
-  )
+  gt::cols_units(
+    gt::ends_with("contact") ~ "s",
+    .units_pattern = "{1} ({2})"
+  ) |>
+  gt_custom_theme()
 ```
 
-@tbl-gaitrite describes each occurence of a foot (`foot`: 0 for left foot, 1 for right foot) touching the ground, from the moment it touches it for the first time (`first_contact`) to the moment when it leaves it entirely (`last_contact`). Therefore, for instance, we can extract the RHS events by (i) filtering the table to keep only rows for which `foot == 1` and (ii) selecting the `first_contact` column which will contain exactly the times at which RHS events occured.
+@tbl-gaitrite describes each occurence of a foot (`foot`: 0 for left foot, 1 for right foot) touching the ground, from the moment it touches it for the first time (`first_contact`) to the moment when it leaves it entirely (`last_contact`). Therefore, for instance, we can extract the RHS events by (i) filtering the table to keep only rows for which `foot == 1` and (ii) selecting the `first_contact` column which will contain exactly the times at which RHS events occured. The following piece of code performs exactly these steps:
 
 An additional preprocessing step is required as part of the synchronization between the GAITRite® and IMU devices. In effect, while we setup a procedure to optimize synchronization, the procedure is only precise up to 5/10 milliseconds. Furthermore, the two devices have different frequencies. Hence, we need to match timepoints measured by the GAITRite® device to the closest timepoint measured by the IMU device.
 
-Another important data pre-processing step pertains to making sure that the retrieved events are ordered appropriately. In effect, by definition, RTO events should follow LHS events, which in turn should follow LTO events which in turn should follow RHS events. The pressure mat might make some labeling mistakes, notably at the beginning or at the end of the walking session, making this verification step critical.
-
-Finally, with the aim of segmenting gait data into gait cycles in a streamlined fashion as the data is measured in real time, we will rely only on present and past data but not future data. Hence, we can filter out the data measured by the IMU device after the occurence of the last gait event of interest as it will not be used. Also, in the present work, we used data up to five timepoints back in time. Hence, we can also filter out all the data measured by the IMU device before the occurence of the first gait event of interest except for the 10 timepoints preceding that first event.
-
-The following code achieves all the pre-processing steps described above and produces @fig-imu-gaitrite which shows events of interest overlaid on a unit QTS measured by the IMU device:
-
 ```{r}
-#| label: fig-imu-gaitrite
-#| fig-cap: "A unit QTS (33rd session) measured by the IMU device on which are overlaid the four events of interest detected by the GAITRite® device."
-#| fig-pos: "H"
+#| label: tbl-raw-gaitrite-data
+#| tbl-cap: "Example (33rd session) of an extraction of the occurence of the key gait events from the GAITRite data *before* suppressing uncorrectly labelled events."
+#| tbl-subcap: ["First half", "Second half"]
+#| tbl-pos: "H"
+#| layout-ncol: 2
+#| html-table-processing: none
 match_gaitrite_to_imu_timepoints <- function(
   gaitrite_timepoints,
   imu_timepoints
@@ -265,9 +252,6 @@ match_gaitrite_to_imu_timepoints <- function(
     imu_timepoints[idx]
   }))
 }
-
-# Read raw events of interest from
-# gaitrite and match them to imu clock
 
 rhs <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
   .gaitrite |>
@@ -297,11 +281,8 @@ rto <- purrr::map2(bhg$gaitrite, bhg$egait, \(.gaitrite, .imu) {
     match_gaitrite_to_imu_timepoints(imu_timepoints = .imu$time)
 })
 
-# Make sure events of interest respect
-# the order RHS --> LTO --> LHS --> RTO
-
 gaitrite_data <- purrr::map(1:nrow(bhg), \(index) {
-  out <- dplyr::bind_rows(
+  dplyr::bind_rows(
     tibble::tibble(
       event_time = rhs[[index]],
       event_type = rep("RHS", length(rhs[[index]]))
@@ -320,59 +301,124 @@ gaitrite_data <- purrr::map(1:nrow(bhg), \(index) {
     )
   ) |>
     dplyr::arrange(event_time)
-  phase_index <- 1
-  out$phase <- rep(phase_index, nrow(out))
-  for (i in 2:nrow(out)) {
-    current_event <- out$event_type[i]
-    previous_event <- out$event_type[i - 1]
-    same_phase <- switch(
-      current_event,
-      "RHS" = previous_event == "RTO",
-      "LTO" = previous_event == "RHS",
-      "LHS" = previous_event == "LTO",
-      "RTO" = previous_event == "LHS"
-    )
-    if (same_phase) {
-      out$phase[i] <- phase_index
-    } else {
-      phase_index <- phase_index + 1
-      out$phase[i] <- phase_index
-    }
-  }
-  largest_phase_index <- out |>
-    dplyr::count(phase) |>
-    dplyr::pull(n) |>
-    which.max()
-  out |>
-    dplyr::filter(phase == largest_phase_index) |>
-    dplyr::select(-phase)
-}) |>
-  dplyr::bind_rows(.id = "session") |>
-  dplyr::mutate(session = as.numeric(session))
-
-# Filter out imu data collected after
-# the last event of interest and before
-# 10 points before the first event
-
-t_min <- gaitrite_data |>
-  dplyr::group_by(session) |>
-  dplyr::summarise(event_time = min(event_time)) |>
-  dplyr::pull(event_time)
-t_max <- gaitrite_data |>
-  dplyr::group_by(session) |>
-  dplyr::summarise(event_time = max(event_time)) |>
-  dplyr::pull(event_time)
-
-imu_data <- purrr::pmap(list(bhg$egait, t_min, t_max), \(.imu, .t_min, .t_max) {
-  idx_min <- which(.imu$time == .t_min)[1]
-  idx_max <- which(.imu$time == .t_max)[1]
-  lower_bnd <- max(idx_min - 10, 1)
-  upper_bnd <- min(idx_max, nrow(.imu))
-  .imu[lower_bnd:upper_bnd, ]
 })
 
-# Plot data from the 33rd session
-# as an example
+n_rows <- nrow(gaitrite_data[[33]])
+n_rows_first <- ceiling(n_rows / 2)
+
+gaitrite_data[[33]] |>
+  dplyr::slice(1:n_rows_first) |>
+  dplyr::select(event_type, event_time) |>
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Event",
+    event_time = "Time of Occurence"
+  ) |>
+  gt::cols_units(event_time ~ "s", .units_pattern = "{1} ({2})") |>
+  gt_custom_theme()
+
+gaitrite_data[[33]] |>
+  dplyr::slice((n_rows_first + 1):n_rows) |>
+  dplyr::select(event_type, event_time) |>
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Event",
+    event_time = "Time of Occurence"
+  ) |>
+  gt::cols_units(event_time ~ "s", .units_pattern = "{1} ({2})") |>
+  gt_custom_theme()
+```
+
+@tbl-raw-gaitrite-data shows the list of consecutive gait events. One can observe that the natural order of the events (RHS $\to$ LTO $\to$ LHS $\to$ RTO) is sometimes broken, especially at the beginning and end of the walking session. Another important data pre-processing step therefore pertains to making sure that the retrieved events are ordered appropriately. The following chunk of code achieves this correction:
+
+```{r}
+#| label: tbl-preprocessed-gaitrite-data
+#| tbl-cap: "Example (33rd session) of an extraction of the occurence of the key gait events from the GAITRite data *after* suppressing uncorrectly labelled events."
+#| tbl-subcap: ["First half", "Second half"]
+#| tbl-pos: "H"
+#| layout-ncol: 2
+gaitrite_data <- gaitrite_data |>
+  purrr::map(\(session_data) {
+    phase_index <- 1
+    session_data$phase <- rep(phase_index, nrow(session_data))
+    for (i in 2:nrow(session_data)) {
+      current_event <- session_data$event_type[i]
+      previous_event <- session_data$event_type[i - 1]
+      same_phase <- switch(
+        current_event,
+        "RHS" = previous_event == "RTO",
+        "LTO" = previous_event == "RHS",
+        "LHS" = previous_event == "LTO",
+        "RTO" = previous_event == "LHS"
+      )
+      if (same_phase) {
+        session_data$phase[i] <- phase_index
+      } else {
+        phase_index <- phase_index + 1
+        session_data$phase[i] <- phase_index
+      }
+    }
+    largest_phase_index <- session_data |>
+      dplyr::count(phase) |>
+      dplyr::pull(n) |>
+      which.max()
+    session_data |>
+      dplyr::filter(phase == largest_phase_index) |>
+      dplyr::select(-phase)
+  })
+
+n_rows <- nrow(gaitrite_data[[33]])
+n_rows_first <- ceiling(n_rows / 2)
+
+gaitrite_data[[33]] |>
+  dplyr::slice(1:n_rows_first) |>
+  dplyr::select(event_type, event_time) |>
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Event",
+    event_time = "Time of Occurence"
+  ) |>
+  gt::cols_units(event_time ~ "s", .units_pattern = "{1} ({2})") |>
+  gt_custom_theme()
+
+gaitrite_data[[33]] |>
+  dplyr::slice((n_rows_first + 1):n_rows) |>
+  dplyr::select(event_type, event_time) |>
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Event",
+    event_time = "Time of Occurence"
+  ) |>
+  gt::cols_units(event_time ~ "s", .units_pattern = "{1} ({2})") |>
+  gt_custom_theme()
+```
+
+@tbl-preprocessed-gaitrite-data shows that, in the case of the $33$-*rd* walking session, this preprocessing step essentially suppressed the first and last events to guarantee the natural order of all remaining events. This is actually what the correction ended up doing for all walking sessions except for the $61$-*st* for which the first three events and the last one have been suppressed.
+
+## Labelled IMU data {#sec-labelled-imu-data}
+
+@sec-sec-imu-data presented the preprocessed IMU data from which we aim at identifying the four key gait events (RHS, LTO, LHS, RTO) and @sec-gaitrite-data presented the preprocessed GAITRite data which provides the ground truth labels for each timepoint. We can now perform a table join use the timepoints as key variable to create the labelled IMU data that will serve as the basis for building the feature space for training supervised classification models.
+
+Before doing this join, we observe that as the obervations are ordered timepoints, we can think of including data from the past as features in addition to data from a given timepoint. This means that there is no need to keep IMU data collected *after* the last event detected in the GAITRite data. Similarly, we only keep the IMU data collected starting $10$ timepoints *before* the first event detected in the GAITRite data, which provides a lower bound to the lag interval that we will explore when training and tuning the classification models later on. The following piece of code
+
+```{r}
+min_timepoints <- gaitrite_data |>
+  purrr::map("event_time") |>
+  purrr::map_dbl(min)
+max_timepoints <- gaitrite_data |>
+  purrr::map("event_time") |>
+  purrr::map_dbl(max)
+
+imu_data <- purrr::pmap(
+  list(bhg$egait, min_timepoints, max_timepoints),
+  \(.imu, .min_timepoint, .max_timepoint) {
+    idx_min <- which(.imu$time == .min_timepoint)[1]
+    idx_max <- which(.imu$time == .max_timepoint)[1]
+    lower_bnd <- max(idx_min - 10, 1)
+    upper_bnd <- min(idx_max, nrow(.imu))
+    .imu[lower_bnd:upper_bnd, ]
+  }
+)
 
 source("scripts/utils-viz.R")
 

@@ -5,6 +5,17 @@
 #| include: false
 library(ggplot2)
 library(squat)
+
+gt_custom_theme <- function(gt_obj) {
+  gt_obj |>
+    gt::opt_stylize(style = 6, color = "gray") |>
+    gt::cols_align(align = "center") |>
+    gt::tab_style(
+      style = "vertical-align:top",
+      locations = gt::cells_column_labels()
+    ) |>
+    gt::tab_options(quarto.disable_processing = TRUE)
+}
 ```
 
 {{< include _01_Introduction.qmd >}}
