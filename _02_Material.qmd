@@ -1,6 +1,8 @@
 # Material {#sec-material}
 
-This section is dedicated to describing the data that we used for segmenting gait in the present work. Essentially, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) sensor at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to label the gait events. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two data sets. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
+In this work, the objective is to detect right and left heel strike and toe off events from hip orientation data over time. Knowledge of the occurences of these events is critical to compute key gait parameters such as the mean and the variability of stride duration, metrics of asymmetry or ratio stance/swing which have been proven to be clinically relevant [@annweiler2009risk;@beauchet2016poor]. We propose to address this problem by training, tuning and comparing several supervised classification models. In details, we consider the timepoints as the statistical units (observations) and we aim at training models to affect a *label* to each of them. This requires to elaborate a *labelled gait data* set in which we know which timepoints correspond to the occurence of the key gait events.
+
+For this purpose, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to record the occurences of the gait events of interest. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two collected data sets and the elaboration of the final labelled data set. Finally, @sec-feature-space details the feature space that we constructed from the raw data to feed our machine learning models.
 
 ## Unit quaternions {#sec-quaternions}
 
@@ -197,7 +199,7 @@ smoothed_qts |>
 
 The code above illustrates some other nice S3 specializations implemented in the [{squat}](https://cran.r-project.org/package=squat/) package such as the `log()` and `exp()` functions to compute the logarithm and exponential of a unit QTS respectively. As mentioned in @sec-quaternions, the logarithm of a unit quaternion has a null scalar part, which is why we set the *w* coordinate to zero in the code above and only smooth the three other coordinates. The function `squat::qts2sqts()` is dedicated to performing this exact computation. @fig-smoothed-qts nicely shows the smoothing effect with subtle variations along the curves that are smoothed out.
 
-### Pressure mat data
+### Pressure mat data {#sec-gaitrite-data}
 
 The GAITRite® mat records the positions of the feet on the mat through pressure-sensitive sensors hidden beneath the mat. It returns a table of spatio-temporal parameters such as stride duration, stride length, walking speed, etc. @tbl-gaitrite-params in the Appendix provides the exhaustive list of all spatio-temporal gait parameters that the walkway outputs. It also returns the time of each event happening during a gait cycle such as the time where a foot touches or leaves the ground. These are the times we use to label our data to predict these events. Since the two devices were triggered simultaneously, the IMU sensor and the GAITRite® mat are assumed to share the same time clock. We use the pressure mat as a gold standard to label the observations into the different classes and train models on this labeled data.
 
@@ -391,6 +393,75 @@ plot_ts(imu_data[[33]], rhs33, rto33, lhs33, lto33)
 ```
 
 ## Feature space {#sec-feature-space}
+
+In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of supervised classification models. We therefore need to define a so-called *feature space* which consists of a data table listing the timepoints by row and collecting a number of features for each of them. A first important feature is the actual label that we want to predict with the trained model. @sec-labelled-gait-data details the elaboration of what
+
+### Labelled gait data {#sec-labelled-gait-data}
+
+ In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
+
+- an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
+- a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
+
+```{r}
+events_to_phases <- function(events) {
+  events_of_interest <- events != "None"
+  first_event <- events[events_of_interest][1]
+  phase_durations <- diff(c(0, sort(which(events_of_interest))))
+  n_phases <- length(phase_durations)
+  phase_names <- switch(
+    first_event,
+    "RHS" = rep(
+      c("Swing", "Pre-Stance", "Stance", "Pre-Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LTO" = rep(
+      c("Pre-Stance", "Stance", "Pre-Swing", "Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LHS" = rep(
+      c("Stance", "Pre-Swing", "Swing", "Pre-Stance"),
+      times = n_phases
+    )[1:n_phases],
+    "RTO" = rep(
+      c("Pre-Swing", "Swing", "Pre-Stance", "Stance"),
+      times = n_phases
+    )[1:n_phases]
+  )
+  purrr::map2(
+    phase_names,
+    phase_durations,
+    \(phase_name, phase_duration) rep(phase_name, times = phase_duration)
+  ) |>
+    purrr::list_c()
+}
+
+labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
+  gaitrite_data <- gaitrite_data |>
+    dplyr::filter(session == session_index) |>
+    dplyr::select(-session)
+  imu_data[[session_index]] |>
+    dplyr::left_join(gaitrite_data, by = c("time" = "event_time")) |>
+    dplyr::mutate(
+      event_type = dplyr::if_else(is.na(event_type), "None", event_type),
+      phase_type = events_to_phases(event_type)
+    )
+}) |>
+  dplyr::bind_rows(.id = "session") |>
+  dplyr::mutate(
+    session = as.numeric(session),
+    event_type = factor(
+      event_type,
+      levels = c("RHS", "LTO", "LHS", "RTO", "None")
+    ),
+    phase_type = factor(
+      phase_type,
+      levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
+    )
+  )
+class(labelled_gait_data) <- class(labelled_gait_data)[-1]
+head(labelled_gait_data)
+```
 
 The feature space is an important piece of machine learning models as it defines the data that will be used to train them. In our application, we constructed a feature space from the raw QTS data recorded by the IMU sensor. First, we need to define what is an observation in our context. An observation corresponds to the data recorded at a given time point $t_j$. Since QTS are ordered sets of unit quaternions, for the $j$-*th* observation (row) of the feature space, we can then use features computed from the data observed at time $t_j$ or any other time points preceding $t_j$. One feature is of course the label of the observation that we get from the gold standard. This variable is available for the train/test process but will not be available at prediction time since it corresponds to the events that we want to predict. The other features are predictors that we compute from the sensor data. The ultimate goal is to design a feature space to label each observation $t_j$ with the gait event happening at that time (if any) using only the predictors computed from the QTS at time points $t_k \le t_j$, with $1 \le k \le j$. In the remainder of this section, we describe the predictors that we computed to build our feature space.
 

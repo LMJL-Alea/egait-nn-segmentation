@@ -2,59 +2,12 @@
 
 ## Classification strategies {#sec-classification-strategies}
 
-Gait event detection is performed by evaluating and comparing two strategies to classify the observations.
+In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of classification models. In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
 
-Strategy E: Predicting gait [E]{.underline}vents
-
-: The strategy E pertains to directly predicting the gait events occuring when walking. Specifically, time points are viewed as statistical units (observations) and we aim at classifying them into five categories:
-
-- *Right Heel Strike*,
-- *Left Toe Off*,
-- *Left Heel Strike*,
-- *Right Toe Off*,
-- *None* (all other times not corresponding to a certain event).
-
-The first four events  (RHS, LTO, LHS and RTO) are coined *events of interest* while the last one encodes the so-called *negative* class. While conveniently aiming at directly predicting the occurrence of gait events of interest, this strategy suffers from a severe class imbalance issue, with the *None* (negative) class being widely over-represented as summarized in @tbl-class-imbalance.
+- an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
+- a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
 
 ```{r}
-#| label: tbl-class-imbalance
-#| tbl-cap: "Strategy E: Count and proportion of observations in each class."
-#| tbl-pos: "H"
-tibble::tibble(
-  class = c(
-    "Right Heel Strike",
-    "Left Toe Off",
-    "Left Heel Strike",
-    "Right Toe Off",
-    "None"
-  ),
-  nb_obs = c("973", "1004", "994", "982", "158401"),
-  prop = c("0.60%", "0.62%", "0.61%", "0.60%", "97.57%")
-) |>
-  gt::gt() |>
-  gt::cols_label(
-    class = "Class",
-    nb_obs = "Number of observations",
-    prop = "Proportion"
-  ) |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = list(gt::cell_text(style = "italic")),
-    locations = gt::cells_body(columns = class)
-  ) |>
-  gt::tab_options(column_labels.background.color = "#616161")
-```
-
-[AST] TO MODIFY
-
-Finally, the following code creates the labelled data set that we will use to elaborate the feature space and produces @tbl-class-summary which exhibits class frequencies whether we focus on gait events () or gait phases ().
-
-```{r}
-#| label: tbl-class-summary
-#| tbl-cap: Two tables
-#| tbl-subcap: ["mtcars", "Just cars"]
-#| layout-ncol: 2
-#| classes: plain
 events_to_phases <- function(events) {
   events_of_interest <- events != "None"
   first_event <- events[events_of_interest][1]
@@ -110,14 +63,82 @@ labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
       levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
     )
   )
+class(labelled_gait_data) <- class(labelled_gait_data)[-1]
+head(labelled_gait_data)
+```
 
+We first need to decide what models should predict. In effect, we can adopt two different strategies.
+
+The most straightforward way pertains to predicting the gait events of interest themselves. We call it **Strategy E**, where **E** stands for [E]{.underline}vents. Following this strategy, this means that we must design a multiclass prediction model with 5 classes (RHS, LTO, LHS, RTO and None) as defined in @sec-gaitrite-data. The first four events (RHS, LTO, LHS and RTO) are coined *events of interest* while the last one encodes the so-called *negative* class. While conveniently aiming at directly predicting the occurrence of gait events of interest, this strategy suffers from a severe class imbalance issue, with the *None* (negative) class being widely over-represented as shown by @tbl-e-counts.
+
+A solution to mitigate this severe class imbalance issue is to predict gait phases instead of events at the cost of some post-processing efforts needed to identify the occurences of RHS, LTO, LHS and RTO after the phase prediction step. As defined in @sec-gaitrite-data, there are four phases to predict (pre-stance, stance, pre-swing and swing). We call this strategy **Strategy P**, where **P** stands for [P]{.underline}hases. @tbl-p-counts exhibits the frequency of timepoints in each phase, which demonstrate that this strategy successfully reduces dramatically class imbalance.
+
+```{r}
+#| label: tbl-class-imbalance
+#| tbl-cap: "Strategy E: Count and proportion of observations in each class."
+#| tbl-pos: "H"
+tibble::tibble(
+  class = c(
+    "Right Heel Strike",
+    "Left Toe Off",
+    "Left Heel Strike",
+    "Right Toe Off",
+    "None"
+  ),
+  nb_obs = c("973", "1004", "994", "982", "158401"),
+  prop = c("0.60%", "0.62%", "0.61%", "0.60%", "97.57%")
+) |>
+  gt::gt() |>
+  gt::cols_label(
+    class = "Class",
+    nb_obs = "Number of observations",
+    prop = "Proportion"
+  ) |>
+  gt::cols_align(align = "center") |>
+  gt::tab_style(
+    style = list(gt::cell_text(style = "italic")),
+    locations = gt::cells_body(columns = class)
+  ) |>
+  gt::tab_options(column_labels.background.color = "#616161")
+```
+
+[AST] TO MODIFY
+
+Finally, the following code creates the labelled data set that we will use to elaborate the feature space and produces @tbl-class-summary which exhibits class frequencies whether we focus on gait events () or gait phases ().
+
+```{r}
+#| label: tbl-class-summary
+#| tbl-cap: Two tables
+#| tbl-subcap: ["mtcars", "Just cars"]
+#| layout-ncol: 2
+#| html-table-processing: none
 labelled_gait_data |>
   dplyr::count(event_type) |>
-  gt::gt()
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Event",
+    n = "Frequency"
+  ) |>
+  gt::opt_stylize(style = 6, color = 'gray') |>
+  gt::cols_align(align = "center") |>
+  gt::tab_style(
+    style = "vertical-align:top",
+    locations = gt::cells_column_labels()
+  )
 
 labelled_gait_data |>
   dplyr::count(phase_type) |>
-  gt::gt()
+  gt::gt() |>
+  gt::cols_label(
+    phase_type = "Phase",
+    n = "Frequency"
+  ) |>
+  gt::opt_stylize(style = 6, color = 'gray') |>
+  gt::cols_align(align = "center") |>
+  gt::tab_style(
+    style = "vertical-align:top",
+    locations = gt::cells_column_labels()
+  )
 ```
 
 We can notice that gait events of interest are largely under-represented while this class imbalance issue is moderate when we put the focus on gait phases.
