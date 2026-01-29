@@ -2,12 +2,31 @@
 
 ## Classification strategies {#sec-classification-strategies}
 
+@sec-labelled-imu-data detailed how we produced the final labelled IMU data in which we assigned  timepoints with either one of the four gait events of interest (RHS, LTO, LHS or RTO) or the *None* class. This variable coined `event_type` is what we ultimately want to predict. Let us examine the frequency of observations within each class:
+
+```{r}
+labelled_imu_data |>
+  dplyr::bind_rows(.id = "session_id") |>
+  dplyr::mutate(session_id = as.integer(session_id)) |>
+  dplyr::count(event_type) |>
+  dplyr::mutate(prop = n / sum(n)) |>
+  gt::gt() |>
+  gt::cols_label(
+    event_type = "Class",
+    n = "Number of observations",
+    prop = "Proportion"
+  ) |>
+  gt::fmt_percent(columns = prop) |>
+  gt_custom_theme()
+```
+
 In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of classification models. In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
 
 - an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
 - a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
 
 ```{r}
+#| eval: false
 events_to_phases <- function(events) {
   events_of_interest <- events != "None"
   first_event <- events[events_of_interest][1]
@@ -112,6 +131,7 @@ Finally, the following code creates the labelled data set that we will use to el
 #| tbl-subcap: ["mtcars", "Just cars"]
 #| layout-ncol: 2
 #| html-table-processing: none
+#| eval: false
 labelled_gait_data |>
   dplyr::count(event_type) |>
   gt::gt() |>
@@ -163,6 +183,202 @@ The definition of these phases matches a typical gait cycle starting when the ri
 ![Gait phases overlaid on a unit QTS.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases-timeserie width=350 fig-pos="H"}
 
 @fig-phases-timeserie shows the gait phases overlaid on a QTS. Each gait phase is mapped to a suitable color. We can see that some phases are larger than others: the *pre-stance* and *pre-swing* phases are indeed shorter than the *stance* and *swing* phases. However, class imbalance is not as severe as in the first strategy.
+
+## Feature space {#sec-feature-space}
+
+In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of supervised classification models. We therefore need to define a so-called *feature space* which consists of a data table listing the timepoints by row and collecting a number of features for each of them. A first important feature is the actual label that we want to predict with the trained model. @sec-labelled-gait-data details the elaboration of what
+
+### Labelled gait data {#sec-labelled-gait-data}
+
+ In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
+
+- an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
+- a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
+
+```{r}
+#| eval: false
+events_to_phases <- function(events) {
+  events_of_interest <- events != "None"
+  first_event <- events[events_of_interest][1]
+  phase_durations <- diff(c(0, sort(which(events_of_interest))))
+  n_phases <- length(phase_durations)
+  phase_names <- switch(
+    first_event,
+    "RHS" = rep(
+      c("Swing", "Pre-Stance", "Stance", "Pre-Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LTO" = rep(
+      c("Pre-Stance", "Stance", "Pre-Swing", "Swing"),
+      times = n_phases
+    )[1:n_phases],
+    "LHS" = rep(
+      c("Stance", "Pre-Swing", "Swing", "Pre-Stance"),
+      times = n_phases
+    )[1:n_phases],
+    "RTO" = rep(
+      c("Pre-Swing", "Swing", "Pre-Stance", "Stance"),
+      times = n_phases
+    )[1:n_phases]
+  )
+  purrr::map2(
+    phase_names,
+    phase_durations,
+    \(phase_name, phase_duration) rep(phase_name, times = phase_duration)
+  ) |>
+    purrr::list_c()
+}
+
+labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
+  gaitrite_data <- gaitrite_data |>
+    dplyr::filter(session == session_index) |>
+    dplyr::select(-session)
+  imu_data[[session_index]] |>
+    dplyr::left_join(gaitrite_data, by = c("time" = "event_time")) |>
+    dplyr::mutate(
+      event_type = dplyr::if_else(is.na(event_type), "None", event_type),
+      phase_type = events_to_phases(event_type)
+    )
+}) |>
+  dplyr::bind_rows(.id = "session") |>
+  dplyr::mutate(
+    session = as.numeric(session),
+    event_type = factor(
+      event_type,
+      levels = c("RHS", "LTO", "LHS", "RTO", "None")
+    ),
+    phase_type = factor(
+      phase_type,
+      levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
+    )
+  )
+class(labelled_gait_data) <- class(labelled_gait_data)[-1]
+head(labelled_gait_data)
+```
+
+The feature space is an important piece of machine learning models as it defines the data that will be used to train them. In our application, we constructed a feature space from the raw QTS data recorded by the IMU sensor. First, we need to define what is an observation in our context. An observation corresponds to the data recorded at a given time point $t_j$. Since QTS are ordered sets of unit quaternions, for the $j$-*th* observation (row) of the feature space, we can then use features computed from the data observed at time $t_j$ or any other time points preceding $t_j$. One feature is of course the label of the observation that we get from the gold standard. This variable is available for the train/test process but will not be available at prediction time since it corresponds to the events that we want to predict. The other features are predictors that we compute from the sensor data. The ultimate goal is to design a feature space to label each observation $t_j$ with the gait event happening at that time (if any) using only the predictors computed from the QTS at time points $t_k \le t_j$, with $1 \le k \le j$. In the remainder of this section, we describe the predictors that we computed to build our feature space.
+
+Angular velocity and acceleration vectors
+
+: If we can have access to the first and second time derivatives of a QTS, we can compute the *angular velocity vector* $\pmb{\Omega}$ and *angular acceleration vector* $\dot{\pmb{\Omega}}$ [@narayan2017]. These vectors are aligned with the axis of rotation and carry in their norm the angular velocity and acceleration respectively. The angular velocity vector is computed as follows:
+
+$$
+\begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix}
+= 2 \mathbf{q}^{-1} \dot{\mathbf{q}} \hspace{3mm} \text{with} \hspace{3mm} \dot{\mathbf{q}} = \frac{d \mathbf{q}}{dt} = \frac{1}{2} \mathbf{q} \begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix}.
+$$ {#eq-angular-vel}
+
+Recall that $\mathbf{q} = \exp \mathbf{v}$ where $\mathbf{v}$ is the logarithm of $\mathbf{q}$ introduced in @eq-smoothed-qts. Then, we have after simple mathematical computations that $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$. Therefore, the angular velocity vector is nothing but twice the vector part of the temporal derivative $\dot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2avvts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular velocity vector at each time point as illustrated by @fig-avvts:
+
+```{r}
+#| label: fig-avvts
+#| fig-cap: "An illustration (33rd session) of the angular velocity vector time series representation."
+#| fig-pos: "H"
+avvts <- squat::qts2avvts(imu_data[[33]], spar = spar)
+avvts |>
+  dplyr::rename(`v[x]` = x, `v[y]` = y, `v[z]` = z) |>
+  tidyr::pivot_longer(
+    cols = c(`v[x]`, `v[y]`, `v[z]`),
+    names_to = "component",
+    values_to = "angular_velocity"
+  ) |>
+  ggplot(aes(x = time, y = angular_velocity)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angular velocity (rad/s)")
+```
+
+The angular acceleration vector $\dot{\pmb{\Omega}}$ is then computed as the derivative of the angular velocity vector:
+
+$$
+\begin{bmatrix}
+0 \\
+\dot{\pmb{\Omega}}
+\end{bmatrix}
+= 2 \left( \mathbf{q}^{-1} \ddot{\mathbf{q}} - (\mathbf{q}^{-1}\dot{\mathbf{q}})^2 \right) \hspace{3mm} \text{with} \hspace{3mm} \ddot{\mathbf{q}} = \frac{d^2 \mathbf{q}}{dt^2} = \frac{1}{2} \left( \dot{\mathbf{q}} \begin{bmatrix}
+0 \\
+\pmb{\Omega}
+\end{bmatrix} + \mathbf{q} \begin{bmatrix}
+0 \\
+\dot{\pmb{\Omega}}
+\end{bmatrix} \right)
+$$ {#eq-angular-acc}
+
+From $\dot{\mathbf{q}} = \mathbf{q} \dot{\mathbf{v}}$, we can write the second temporal derivative of $\mathbf{q}$ as $\ddot{\mathbf{q}} = \mathbf{q} \left( \dot{\mathbf{v}} \dot{\mathbf{v}} + \ddot{\mathbf{v}} \right)$. Therefore, the angular acceleration vector is nothing but twice the vector part of the second temporal derivative $\ddot{\mathbf{v}}$ of the log-QTS. This is implemented in the `squat::qts2aavts()` function, which returns a tibble with columns `time`, `x`, `y` and `z` storing the coordinates of the angular acceleration vector at each time point as illustrated by @fig-aavts:
+
+```{r}
+#| label: fig-aavts
+#| fig-cap: "An illustration (33rd session) of the angular acceleration vector time series representation."
+#| fig-pos: "H"
+aavts <- squat::qts2aavts(imu_data[[33]], spar = spar)
+aavts |>
+  dplyr::rename(`a[x]` = x, `a[y]` = y, `a[z]` = z) |>
+  tidyr::pivot_longer(
+    cols = c(`a[x]`, `a[y]`, `a[z]`),
+    names_to = "component",
+    values_to = "angular_acceleration"
+  ) |>
+  ggplot(aes(x = time, y = angular_acceleration)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angular acceleration (rad/s²)")
+```
+
+Euler angles
+
+: The angles named *Roll*, *Pitch* and *Yaw* represent rotations around the three principal axes. They are computed from a unit quaternion $\mathbf{q} = (q_w, q_x, q_y, q_z)$ using the following formulas:
+
+$$
+\begin{bmatrix}
+\mathrm{Roll} \\
+\mathrm{Pitch} \\
+\mathrm{Yaw}
+\end{bmatrix}
+= 
+\begin{bmatrix}
+\arctan\!2 \left(2(q_w q_x + q_y q_z), 1-2(q_x^2 + q_y^2)  \right) \\
+\arcsin \left(2(q_w q_y - q_x q_z) \right) \\
+\arctan\!2 \left(2(q_w q_z + q_x q_y), 1-2(q_y^2 + q_z^2)  \right)
+\end{bmatrix}
+$$ {#eq-rpy}
+
+where $\arctan\!2(y, x)$ computes the angle $\theta$ (in radians) between the positive $x$-axis and the ray from the origin to the point $(x, y)$ in the Cartesian plane. This is implemented in the `squat::qts2rpyts()` function, which returns a tibble with columns `time`, `roll`, `pitch` and `yaw` storing the roll, pitch and yaw angles at each time point as illustrated by @fig-rpyts:
+
+```{r}
+#| label: fig-rpyts
+#| fig-cap: "An illustration (33rd session) of the roll-pitch-yaw time series representation."
+#| fig-pos: "H"
+rpyts <- squat::qts2rpyts(imu_data[[33]])
+rpyts |>
+  dplyr::rename(Roll = roll, Pitch = pitch, Yaw = yaw) |>
+  tidyr::pivot_longer(
+    cols = c(Roll, Pitch, Yaw),
+    names_to = "component",
+    values_to = "angle_values"
+  ) |>
+  ggplot(aes(x = time, y = angle_values)) +
+  geom_line() +
+  facet_wrap(~component, ncol = 1, scales = "free_y", labeller = label_parsed) +
+  theme_bw() +
+  labs(title = "", x = "Time (seconds)", y = "Angle (rad)")
+```
+
+Walking speed
+
+: It is likely that the shape of the QTS can be quite different according to the walking speed. We therefore included this information in the feature space from the GAITRite® mat output. Since this predictor comes from the gold standard, it is not available when predicting on new time series where patients only used the wearable sensor. To counter this issue, we can estimate the walking speed from the mean angular velocity with a simple linear regression.
+
+Hyper-parameters
+
+: The feature space depends on a number of hyper-parameters. The first one is a smoothness parameter called *spar* that represents the amount of smoothing that we seek to achieve when fitting cubic splines to the original QTS. Since time derivatives are used to compute some predictors, it is indeed useful to smooth the QTS sufficiently so the derivative values remain stable and not dominated by noise. The *spar* parameter takes its values in the interval $]0,1]$. The second hyper-parameter is the *lag* parameter. To keep information from the past as we predict at a given time point $t_j$, we include features computed at $t_j$ as well as the same features computed at time points $t_{j-1}, \dots, t_{j-\mathrm{lag}}$. The size of the feature space therefore depends on the *lag* parameter as it contains $10 + 9 \times \mathrm{lag}$ predictors. The ten first predictors are the three-component angular speed vector, the three-component angular acceleration vector, the three angles Roll, Pitch and Yaw and the walking speed. We then add nine predictors per *lag*: the angular speed and acceleration and the Roll-Pitch-Yaw angles from the previous time.
+
+Finally, a last hyper-parameter is used when we label the observations with the gait event times from the gold standard. It is called *k* and controls the number of points around a gait event that we label as part of the event. In @sec-classification-strategies, we elicit two strategies for building segmentation models, one of which does not use this parameter. Therefore, we differ other details about this parameter in the dedicated section.
 
 ## Supervised classification models {#sec-supervised-classification-models}
 
