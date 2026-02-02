@@ -2,7 +2,7 @@
 
 In this work, the objective is to detect right and left heel strike and toe off events from hip orientation data over time. Knowledge of the occurences of these events is critical to compute key gait parameters such as the mean and the variability of stride duration, metrics of asymmetry or ratio stance/swing which have been proven to be clinically relevant [@annweiler2009risk;@beauchet2016poor]. We propose to address this problem by training, tuning and comparing several supervised classification models. In details, we consider the timepoints as the statistical units (observations) and we aim at training models to affect a *label* to each of them. This requires to elaborate a *labelled gait data* set in which we know which timepoints correspond to the occurence of the key gait events.
 
-For this purpose, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to record the occurences of the gait events of interest. @sec-data-acquisition elicits the data acquisition protocol while @sec-data-sets summarizes the two collected data sets and the elaboration of the final labelled data set.
+For this purpose, we used two sources of data. First, we clipped a 9-axis inertial measurement unit (IMU) at the level of the right hip and measured its orientation (that we assimilate to the hip orientation) over time during walking sessions. The data is recorded in the form of a unit quaternion time series. @sec-quaternions provides a brief overview of unit quaternions and their properties. Second, we used a pressure-sensitive walkway (GAITRite® mat) as a gold standard to record the occurences of the gait events of interest. @sec-data-acquisition elicits the data acquisition protocol while @sec-imu-data and @sec-gaitrite-data summarize the two collected data sets and the elaboration of the final labelled data set.
 
 ## Unit quaternions {#sec-quaternions}
 
@@ -58,9 +58,10 @@ We included six subjects in this study (three men and three women) of different 
 #| label: tbl-subjects
 #| tbl-cap: "Summary of subjects and walking speeds used to train the model."
 #| tbl-pos: "H"
-bhg <- readRDS(url(
-  "https://zenodo.org/records/18222246/files/bellier_healthy_gait.rds?download=1"
-))
+# bhg <- readRDS(url(
+#   "https://zenodo.org/records/18222246/files/bellier_healthy_gait.rds?download=1"
+# ))
+bhg <- readRDS("~/Downloads/bhg.rds")
 
 bhg |>
   dplyr::group_by(subject, gender, age, condition) |>
@@ -76,6 +77,7 @@ bhg |>
     preferential = base,
     fast
   ) |>
+  dplyr::mutate_at(dplyr::vars(slow:fast), as.integer) |>
   gt::gt() |>
   gt::tab_spanner(
     label = "Walking speed (cm/s)",
@@ -84,11 +86,15 @@ bhg |>
   gt::cols_label(
     id = "ID",
     gender = "Gender",
-    age = "Age range (years)",
+    age = "Age range",
     slow = "Slow",
     intermediate = "Intermediate",
     preferential = "Preferential",
     fast = "Fast"
+  ) |>
+  gt::cols_units(
+    age ~ "years",
+    .units_pattern = "{1} ({2})"
   ) |>
   gt::sub_missing() |>
   gt_custom_theme()
@@ -216,6 +222,7 @@ The part of the raw data from the GAITRite® walkway that we kept for labeling t
 #| tbl-pos: "H"
 bhg$gaitrite[[33]] |>
   dplyr::select(foot, first_contact, last_contact) |>
+  dplyr::mutate(foot = as.integer(foot)) |>
   gt::gt() |>
   gt::cols_label(
     foot = "Foot",
@@ -451,6 +458,6 @@ df |>
   geom_line() +
   facet_wrap(vars(name), ncol = 1, scales = "free") +
   theme_bw() +
-  labs(x = "Time (s)", y = "", color = "Event type") +
+  labs(x = "Time (s)", y = "", color = "Events") +
   theme(legend.position = "top")
 ```

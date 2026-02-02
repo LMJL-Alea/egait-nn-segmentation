@@ -1,10 +1,15 @@
 # Methods {#sec-methods}
 
+We dedicated the previous @sec-material to presenting the available data and elaborating the input labelled IMU data. This section aims at eliciting the methods that we designed to train, tune and comparing several models with the aim of detecting the key gait events RHS, LTO, LHS and RTO from IMU data exclusively, possibly in a streamlined fashion. @sec-classification-strategies explores two different strategies that we compared to achieve this goal. @sec-feature-space lists the variables that we computed to be included in the feature space for training and tuning the models. @sec-models describes the models themselves. @sec-class-imbalance details how we dealt with the class imbalance problem. @sec-performance-metrics summarizes the performance metrics that we used to tune and compare models. Finally, @sec-data-splitting explains the procedure that we adopted to split the data set for training, tuning and testing the models.
+
 ## Classification strategies {#sec-classification-strategies}
 
 @sec-labelled-imu-data detailed how we produced the final labelled IMU data in which we assigned  timepoints with either one of the four gait events of interest (RHS, LTO, LHS or RTO) or the *None* class. This variable coined `event_type` is what we ultimately want to predict. Let us examine the frequency of observations within each class:
 
 ```{r}
+#| label: tbl-event-freq
+#| tbl-cap: "Absolute and relative frequencies of the different gait events in the final labelled IMU data set."
+#| tbl-pos: "H"
 labelled_imu_data |>
   dplyr::bind_rows(.id = "session_id") |>
   dplyr::mutate(session_id = as.integer(session_id)) |>
@@ -16,18 +21,18 @@ labelled_imu_data |>
     n = "Number of observations",
     prop = "Proportion"
   ) |>
-  gt::fmt_percent(columns = prop) |>
-  gt_custom_theme()
+  gt_custom_theme() |>
+  gt::fmt_percent(columns = prop)
 ```
 
-In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of classification models. In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
-
-- an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
-- a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
+@tbl-event-freq reveals that the task of predicting gait events of interest is a severe case of class imbalance, with less than 1\% of timepoints in the classes of interest while more than 95\% of timepoints end up in the negative class. To mitigate this issue, we can frame the problem differently and build models to predict membership of timepoints to gait *phases* instead of gait *events*. In effect, as explained in @sec-gaitrite-data, gait events define four phases within the typical gait cycle: pre-stance (between RHS and LTO), stance (between LTO and LHS), pre-swing (between LHS and RTO) and swing between (between RTO and RHS). The code below augments the labelled IMU data set with the membership to gait phases and produces the corresponding frequency table:
 
 ```{r}
-#| eval: false
+#| label: tbl-phase-freq
+#| tbl-cap: "Absolute and relative frequencies of the different gait phases in the final labelled IMU data set."
+#| tbl-pos: "H"
 events_to_phases <- function(events) {
+  events <- as.character(events)
   events_of_interest <- events != "None"
   first_event <- events[events_of_interest][1]
   phase_durations <- diff(c(0, sort(which(events_of_interest))))
@@ -59,208 +64,115 @@ events_to_phases <- function(events) {
     purrr::list_c()
 }
 
-labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
-  gaitrite_data <- gaitrite_data |>
-    dplyr::filter(session == session_index) |>
-    dplyr::select(-session)
-  imu_data[[session_index]] |>
-    dplyr::left_join(gaitrite_data, by = c("time" = "event_time")) |>
-    dplyr::mutate(
-      event_type = dplyr::if_else(is.na(event_type), "None", event_type),
-      phase_type = events_to_phases(event_type)
-    )
-}) |>
-  dplyr::bind_rows(.id = "session") |>
-  dplyr::mutate(
-    session = as.numeric(session),
-    event_type = factor(
-      event_type,
-      levels = c("RHS", "LTO", "LHS", "RTO", "None")
-    ),
-    phase_type = factor(
-      phase_type,
-      levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
-    )
-  )
-class(labelled_gait_data) <- class(labelled_gait_data)[-1]
-head(labelled_gait_data)
-```
+labelled_imu_data <- labelled_imu_data |>
+  purrr::map(\(.imu_data) {
+    .imu_data |>
+      dplyr::mutate(
+        phase_type = events_to_phases(event_type),
+        phase_type = factor(
+          phase_type,
+          levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
+        )
+      )
+  })
 
-We first need to decide what models should predict. In effect, we can adopt two different strategies.
-
-The most straightforward way pertains to predicting the gait events of interest themselves. We call it **Strategy E**, where **E** stands for [E]{.underline}vents. Following this strategy, this means that we must design a multiclass prediction model with 5 classes (RHS, LTO, LHS, RTO and None) as defined in @sec-gaitrite-data. The first four events (RHS, LTO, LHS and RTO) are coined *events of interest* while the last one encodes the so-called *negative* class. While conveniently aiming at directly predicting the occurrence of gait events of interest, this strategy suffers from a severe class imbalance issue, with the *None* (negative) class being widely over-represented as shown by @tbl-e-counts.
-
-A solution to mitigate this severe class imbalance issue is to predict gait phases instead of events at the cost of some post-processing efforts needed to identify the occurences of RHS, LTO, LHS and RTO after the phase prediction step. As defined in @sec-gaitrite-data, there are four phases to predict (pre-stance, stance, pre-swing and swing). We call this strategy **Strategy P**, where **P** stands for [P]{.underline}hases. @tbl-p-counts exhibits the frequency of timepoints in each phase, which demonstrate that this strategy successfully reduces dramatically class imbalance.
-
-```{r}
-#| label: tbl-class-imbalance
-#| tbl-cap: "Strategy E: Count and proportion of observations in each class."
-#| tbl-pos: "H"
-tibble::tibble(
-  class = c(
-    "Right Heel Strike",
-    "Left Toe Off",
-    "Left Heel Strike",
-    "Right Toe Off",
-    "None"
-  ),
-  nb_obs = c("973", "1004", "994", "982", "158401"),
-  prop = c("0.60%", "0.62%", "0.61%", "0.60%", "97.57%")
-) |>
+labelled_imu_data |>
+  dplyr::bind_rows(.id = "session_id") |>
+  dplyr::mutate(session_id = as.numeric(session_id)) |>
+  dplyr::count(phase_type) |>
+  dplyr::mutate(prop = n / sum(n)) |>
   gt::gt() |>
   gt::cols_label(
-    class = "Class",
-    nb_obs = "Number of observations",
+    phase_type = "Class",
+    n = "Number of observations",
     prop = "Proportion"
   ) |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = list(gt::cell_text(style = "italic")),
-    locations = gt::cells_body(columns = class)
-  ) |>
-  gt::tab_options(column_labels.background.color = "#616161")
+  gt_custom_theme() |>
+  gt::fmt_percent(columns = prop)
 ```
 
-[AST] TO MODIFY
-
-Finally, the following code creates the labelled data set that we will use to elaborate the feature space and produces @tbl-class-summary which exhibits class frequencies whether we focus on gait events () or gait phases ().
+@tbl-phase-freq shows that the class imbalance issue is much less severe when we aim at predicting gait phases. As illustrated in @fig-imu-data-with-phases, the two phases labelled starting with *Pre-* are shorter than the other two as they represent approximately 10\% of the gait cycle each while stance and swing phases are 40\%-long.
 
 ```{r}
-#| label: tbl-class-summary
-#| tbl-cap: Two tables
-#| tbl-subcap: ["mtcars", "Just cars"]
-#| layout-ncol: 2
-#| html-table-processing: none
-#| eval: false
-labelled_gait_data |>
-  dplyr::count(event_type) |>
-  gt::gt() |>
-  gt::cols_label(
-    event_type = "Event",
-    n = "Frequency"
-  ) |>
-  gt::opt_stylize(style = 6, color = 'gray') |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = "vertical-align:top",
-    locations = gt::cells_column_labels()
-  )
+#| label: fig-imu-data-with-phases
+#| fig-cap: "Filtered IMU data (33rd session) colored by gait phases with key gait events superimposed with colored points as well."
+#| fig-pos: "H"
+df <- tidyr::pivot_longer(
+  labelled_imu_data[[33]],
+  cols = -c(time, event_type, phase_type)
+)
 
-labelled_gait_data |>
-  dplyr::count(phase_type) |>
-  gt::gt() |>
-  gt::cols_label(
-    phase_type = "Phase",
-    n = "Frequency"
-  ) |>
-  gt::opt_stylize(style = 6, color = 'gray') |>
-  gt::cols_align(align = "center") |>
-  gt::tab_style(
-    style = "vertical-align:top",
-    locations = gt::cells_column_labels()
-  )
+df |>
+  ggplot(aes(x = time, y = value)) +
+  geom_point(mapping = aes(color = phase_type), size = 1) +
+  geom_line() +
+  geom_point(
+    data = dplyr::filter(df, event_type != "None"),
+    mapping = aes(group = event_type),
+    size = 2
+  ) +
+  facet_wrap(vars(name), ncol = 1, scales = "free") +
+  theme_bw() +
+  labs(x = "Time (s)", y = "", color = "Phases") +
+  theme(legend.position = "top")
 ```
 
-We can notice that gait events of interest are largely under-represented while this class imbalance issue is moderate when we put the focus on gait phases.
+In the end, we therefore designed two classification strategies:
 
-Another way of showing this issue is to overlay the occurence of the events of interest detected by the GAITRite® mat on a QTS recorded by the IMU device (see @fig-event-timeserie). Each colored point represents an event of interest and all other times belong to the *None* class.
-
-![Gait event occurences overlaid on a unit QTS.](images/events_on_time_serie_MSI_N_R2.png){#fig-event-timeserie width=350}
-
-To mitigate this effect, when the mat records the occurence of a gait event of interest at a specific time point, we also label surrounding time points with the same event. The size of this window is controlled by a parameter $k$ which sets the number of preceding points labelled as the event of interest. It also allows to account for some uncertainty as the time range between two points is only 10 ms. For instance, if we set $k = 1$, we label $3$ observations as part of the event rather than just one. In this case, we consider that the event happens in a window of $20$ ms.
-
-Strategy P: Predicting gait [P]{.underline}hases
-
-: The strategy P pertains to predicting gait phases in the signal that are characterized by the gait events. We label each part in the signal between two events as a phase, leading to four classes for our observations:
-
-- *Pre-Stance* phase: between *Right Heel Strike* and *Left Toe Off*,
-- *Stance* phase: between *Left Toe Off* and *Left Heel Strike*,
-- *Pre-Swing* phase: between *Left Heel Strike* and *Right Toe Off*,
-- *Swing* phase: between *Right Toe Off* and *Right Heel Strike*.
-
-The definition of these phases matches a typical gait cycle starting when the right foot hits the ground. This strategy generates prediction classes that are less imbalanced, as opposed to the first strategy in which the *None* class dominates the dataset. The downside is that some post-processing is needed because the segmentation models will predict gait phases and we need to further decide on the exact orrucence of gait events of interest within the predicted phases.
-
-![Gait phases overlaid on a unit QTS.](images/phases_on_time_serie_MSI_N_R2.png){#fig-phases-timeserie width=350 fig-pos="H"}
-
-@fig-phases-timeserie shows the gait phases overlaid on a QTS. Each gait phase is mapped to a suitable color. We can see that some phases are larger than others: the *pre-stance* and *pre-swing* phases are indeed shorter than the *stance* and *swing* phases. However, class imbalance is not as severe as in the first strategy.
+- **Strategy E**, where **E** stands for [E]{.underline}vents, which aims at predicting gait events of interest directly but suffers from a severe class imbalance issue;
+- **Strategy P**, where **P** stands for [P]{.underline}hases, which aims at predicting gait phases hence reducing class imbalance at the cost of requiring post-processing to pinpoint the exact times of occurence of gait events of interest.
 
 ## Feature space {#sec-feature-space}
 
-In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of supervised classification models. We therefore need to define a so-called *feature space* which consists of a data table listing the timepoints by row and collecting a number of features for each of them. A first important feature is the actual label that we want to predict with the trained model. @sec-labelled-gait-data details the elaboration of what
-
-### Labelled gait data {#sec-labelled-gait-data}
-
- In this view, we can first create the data set that we will use for training. The following code achieves this task by binding together all timepoints from all walking sessions while attaching to each timepoint:
-
-- an `event_type` which affects it to one of the five gait events defined in @sec-gaitrite-data;
-- a `phase_type` which affects it one of the four gait pahses defined in @sec-gaitrite-data.
-
-```{r}
-#| eval: false
-events_to_phases <- function(events) {
-  events_of_interest <- events != "None"
-  first_event <- events[events_of_interest][1]
-  phase_durations <- diff(c(0, sort(which(events_of_interest))))
-  n_phases <- length(phase_durations)
-  phase_names <- switch(
-    first_event,
-    "RHS" = rep(
-      c("Swing", "Pre-Stance", "Stance", "Pre-Swing"),
-      times = n_phases
-    )[1:n_phases],
-    "LTO" = rep(
-      c("Pre-Stance", "Stance", "Pre-Swing", "Swing"),
-      times = n_phases
-    )[1:n_phases],
-    "LHS" = rep(
-      c("Stance", "Pre-Swing", "Swing", "Pre-Stance"),
-      times = n_phases
-    )[1:n_phases],
-    "RTO" = rep(
-      c("Pre-Swing", "Swing", "Pre-Stance", "Stance"),
-      times = n_phases
-    )[1:n_phases]
-  )
-  purrr::map2(
-    phase_names,
-    phase_durations,
-    \(phase_name, phase_duration) rep(phase_name, times = phase_duration)
-  ) |>
-    purrr::list_c()
-}
-
-labelled_gait_data <- purrr::map(1:nrow(bhg), \(session_index) {
-  gaitrite_data <- gaitrite_data |>
-    dplyr::filter(session == session_index) |>
-    dplyr::select(-session)
-  imu_data[[session_index]] |>
-    dplyr::left_join(gaitrite_data, by = c("time" = "event_time")) |>
-    dplyr::mutate(
-      event_type = dplyr::if_else(is.na(event_type), "None", event_type),
-      phase_type = events_to_phases(event_type)
-    )
-}) |>
-  dplyr::bind_rows(.id = "session") |>
-  dplyr::mutate(
-    session = as.numeric(session),
-    event_type = factor(
-      event_type,
-      levels = c("RHS", "LTO", "LHS", "RTO", "None")
-    ),
-    phase_type = factor(
-      phase_type,
-      levels = c("Pre-Stance", "Stance", "Pre-Swing", "Swing")
-    )
-  )
-class(labelled_gait_data) <- class(labelled_gait_data)[-1]
-head(labelled_gait_data)
-```
+In this work, the objective is to identify which timepoints of unit QTS correspond to the RHS, LTO, LHS and RTO events. For this purpose, we consider the timepoints as statistical units (observations) and we aim at labelling them by means of supervised classification models. We therefore need to define a so-called *feature space* which consists of a data table listing the timepoints by row and collecting a number of features for each of them. A first important feature is the actual label that we want to predict with the trained model. @sec-labelled-imu-data details the elaboration of what
 
 The feature space is an important piece of machine learning models as it defines the data that will be used to train them. In our application, we constructed a feature space from the raw QTS data recorded by the IMU sensor. First, we need to define what is an observation in our context. An observation corresponds to the data recorded at a given time point $t_j$. Since QTS are ordered sets of unit quaternions, for the $j$-*th* observation (row) of the feature space, we can then use features computed from the data observed at time $t_j$ or any other time points preceding $t_j$. One feature is of course the label of the observation that we get from the gold standard. This variable is available for the train/test process but will not be available at prediction time since it corresponds to the events that we want to predict. The other features are predictors that we compute from the sensor data. The ultimate goal is to design a feature space to label each observation $t_j$ with the gait event happening at that time (if any) using only the predictors computed from the QTS at time points $t_k \le t_j$, with $1 \le k \le j$. In the remainder of this section, we describe the predictors that we computed to build our feature space.
 
-Angular velocity and acceleration vectors
+### Angular velocity and acceleration vectors
 
-: If we can have access to the first and second time derivatives of a QTS, we can compute the *angular velocity vector* $\pmb{\Omega}$ and *angular acceleration vector* $\dot{\pmb{\Omega}}$ [@narayan2017]. These vectors are aligned with the axis of rotation and carry in their norm the angular velocity and acceleration respectively. The angular velocity vector is computed as follows:
+```{r}
+saveRDS(labelled_imu_data, file = "~/Downloads/labelled_imu_data.rds")
+```
+
+```{r}
+labelled_imu_data |>
+  purrr::map(\(.imu_data) {
+    tmp <- .imu_data |>
+      dplyr::select(time, w, x, y, z) |>
+      dplyr::filter(time < 7) |>
+      squat::as_qts() |>
+      squat::qts2avvts()
+  }) |>
+  dplyr::bind_rows(.id = "session_id") |>
+  dplyr::mutate(session_id = as.factor(session_id)) |>
+  dplyr::filter(session_id %in% 1:20) |>
+  tidyr::pivot_longer(cols = -c(time, session_id)) |>
+  ggplot(aes(x = time, y = value, color = session_id)) +
+  geom_line(alpha = 0.7) +
+  facet_wrap(vars(name), ncol = 1) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+labelled_imu_data |>
+  purrr::map(\(.imu_data) {
+    tmp <- .imu_data |>
+      dplyr::select(time, w, x, y, z) |>
+      dplyr::filter(time < 7) |>
+      squat::as_qts() |>
+      squat::qts2avmts()
+  }) |>
+  dplyr::bind_rows(.id = "session_id") |>
+  dplyr::mutate(session_id = as.factor(session_id)) |>
+  dplyr::filter(session_id %in% 1:20) |>
+  ggplot(aes(x = time, y = magnitude, color = session_id)) +
+  geom_line(alpha = 0.7) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+If we can have access to the first and second time derivatives of a QTS, we can compute the *angular velocity vector* $\pmb{\Omega}$ and *angular acceleration vector* $\dot{\pmb{\Omega}}$ [@narayan2017]. These vectors are aligned with the axis of rotation and carry in their norm the angular velocity and acceleration respectively. The angular velocity vector is computed as follows:
 
 $$
 \begin{bmatrix}
@@ -380,7 +292,7 @@ Hyper-parameters
 
 Finally, a last hyper-parameter is used when we label the observations with the gait event times from the gold standard. It is called *k* and controls the number of points around a gait event that we label as part of the event. In @sec-classification-strategies, we elicit two strategies for building segmentation models, one of which does not use this parameter. Therefore, we differ other details about this parameter in the dedicated section.
 
-## Supervised classification models {#sec-supervised-classification-models}
+## Supervised classification models {#sec-models}
 
 In addition to the two classification strategies presented in @sec-classification-strategies, the literature presents a wide variety of machine learning models that can be used for supervised classification. In this section, we detail the different models that we selected to compare for our task of gait event detection and phase prediction. The choice of these models was made among the models available in the [{tidymodels}](https://www.tidymodels.org) framework in R [@tidymodels] in order to guarantee a consistent and identical implementation for their training and evaluation.
 
@@ -490,7 +402,7 @@ $$ {#eq-youden}
 
 with $w \in [0,1]$ representing the importance given to the accurate prediction of the minority classes. In our application, we chose to put a weight of $0.7$ on the macro-average sensitivity to favor a good proportions of predictions of minority classes at the cost of over predicting those classes.
 
-## Data splitting and tuning strategy
+## Data splitting and tuning strategy {#sec-data-splitting}
 
 To correctly tune and evaluate the model, data is initially split into two sets: the *training set* in which we put 80% of the observations and the *test set* in which we put 20% of observations. The critical point is to never use the test set during training or tuning to be able to evaluate the trained and tuned model on data that it never used for training or tuning. We chose to keep entire walking sessions in each set so that the model would never see any observations coming from sessions in the test set during training. With this strategy, we included 139 sessions in the training set and 35 sessions in the test set.
 

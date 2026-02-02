@@ -6,10 +6,22 @@
 library(ggplot2)
 library(squat)
 
+#consecutive_id(c(TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, NA, NA))
+is_categorical <- function(x) {
+  is.character(x) | is.factor(x)
+}
+
 gt_custom_theme <- function(gt_obj) {
   gt_obj |>
     gt::opt_stylize(style = 6, color = "gray") |>
-    gt::cols_align(align = "center") |>
+    gt::fmt_number(columns = gt::where(is.numeric), decimals = 2) |>
+    gt::fmt_number(columns = gt::where(is.integer), decimals = 0) |>
+    gt::cols_align_decimal(
+      columns = gt::where(is.numeric),
+      dec_mark = ".",
+      locale = "en"
+    ) |>
+    gt::cols_align(align = "left", columns = gt::where(is_categorical)) |>
     gt::tab_style(
       style = "vertical-align:top",
       locations = gt::cells_column_labels()

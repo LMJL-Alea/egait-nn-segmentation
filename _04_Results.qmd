@@ -1,6 +1,6 @@
 # Results {#sec-results}
 
-In this section, we aim at comparing both the two classification strategies defined in @sec-classification-strategies and the models described in @sec-supervised-classification-models to select a final model which is best able to detect gait events from the raw sensor data.
+In this section, we aim at comparing both the two classification strategies defined in @sec-classification-strategies and the models described in @sec-models to select a final model which is best able to detect gait events from the raw sensor data.
 
 ## Tuning of hyper-parameters
 
